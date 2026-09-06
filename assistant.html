@@ -5,75 +5,456 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI教研助手</title>
 <style>
-:root{--bg:#07111f;--panel:rgba(16,33,56,.78);--line:rgba(103,185,255,.28);--text:#f4f8ff;--muted:#95a8c2;--cyan:#6de2ff;--blue:#5c8dff;--violet:#8f7cff}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;background:#07111f;color:var(--text)}
-body{background:radial-gradient(circle at 75% 8%,rgba(50,116,215,.25),transparent 30%),linear-gradient(145deg,#07101c,#09182a 60%,#08111f)}
-body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.32;background-image:radial-gradient(circle,#d9f1ff 0 1px,transparent 1.2px);background-size:90px 90px}
-.shell{max-width:1280px;margin:auto;min-height:100vh;padding:28px}
-.top{display:flex;align-items:center;justify-content:space-between}.back{color:#cfe5ff;text-decoration:none;padding:10px 14px;border:1px solid rgba(130,190,255,.2);border-radius:12px;background:rgba(11,24,41,.45)}
-.logo{font-size:18px;color:#cce5ff}.hero{margin:54px 0 28px}.hero h1{font-size:54px;margin:0;background:linear-gradient(180deg,#fff,#8fd5ff 72%,#817fff);-webkit-background-clip:text;color:transparent}.hero p{font-size:20px;color:#aabbd1;margin-top:10px}
-.layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,.7fr);gap:20px}
-.panel{background:linear-gradient(180deg,rgba(18,39,67,.78),rgba(10,24,43,.82));border:1px solid var(--line);border-radius:22px;backdrop-filter:blur(16px);box-shadow:0 22px 60px rgba(0,0,0,.22)}
-.chat{min-height:610px;display:flex;flex-direction:column;overflow:hidden}.chat-head{padding:18px 20px;border-bottom:1px solid rgba(130,187,255,.12);display:flex;align-items:center;justify-content:space-between}.status{font-size:13px;color:#9ae9ff}.status:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#50e7b4;box-shadow:0 0 10px #50e7b4;margin-right:8px}
-.messages{padding:22px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:18px;max-height:520px}.msg{max-width:86%;padding:15px 17px;border-radius:16px;line-height:1.75;white-space:pre-wrap}.ai{align-self:flex-start;background:rgba(41,69,103,.55);border:1px solid rgba(112,181,255,.18)}.user{align-self:flex-end;background:linear-gradient(135deg,rgba(55,142,255,.42),rgba(108,95,238,.38));border:1px solid rgba(119,182,255,.25)}.thinking{opacity:.75}
-.composer{padding:18px;border-top:1px solid rgba(130,187,255,.12)}.box{display:flex;gap:12px;border:1px solid rgba(105,190,255,.35);border-radius:18px;padding:12px;background:rgba(4,15,29,.5);box-shadow:0 0 24px rgba(61,135,255,.08)}textarea{flex:1;min-height:84px;max-height:180px;resize:vertical;background:transparent;border:none;outline:none;color:#fff;font-size:16px;line-height:1.6}.send{align-self:flex-end;border:none;border-radius:14px;padding:13px 18px;background:linear-gradient(90deg,#6de7ff,#70bfff 55%,#9b82ff);color:#071525;font-weight:800;cursor:pointer}.send:disabled{opacity:.45;cursor:not-allowed}
-.side{padding:20px}.side h3{margin:0 0 14px}.quick{display:grid;gap:11px}.q{padding:14px;border-radius:14px;border:1px solid rgba(123,181,255,.14);background:rgba(28,49,76,.54);cursor:pointer;transition:.2s}.q:hover{transform:translateY(-2px);border-color:rgba(109,220,255,.45)}.q b{display:block;margin-bottom:4px}.q span{font-size:13px;color:#90a3bd}.tip{margin-top:20px;padding:16px;border-radius:14px;background:rgba(15,30,51,.55);color:#9eb1ca;font-size:13px;line-height:1.75}.error{color:#ffb7c4}
-@media(max-width:850px){.layout{grid-template-columns:1fr}.hero h1{font-size:42px}.shell{padding:18px}.side{order:-1}.chat{min-height:600px}}
+:root{
+  --bg:#07111f;--panel:rgba(16,33,56,.78);--panel2:rgba(10,24,43,.82);
+  --line:rgba(103,185,255,.28);--text:#f4f8ff;--muted:#95a8c2;
+  --cyan:#6de2ff;--blue:#5c8dff;--violet:#8f7cff;--green:#57e6b2;--warn:#ffcf66;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;background:#07111f;color:var(--text)}
+body{
+  background:
+    radial-gradient(circle at 75% 8%,rgba(50,116,215,.25),transparent 30%),
+    linear-gradient(145deg,#07101c,#09182a 60%,#08111f);
+}
+body:before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.28;
+  background-image:radial-gradient(circle,#d9f1ff 0 1px,transparent 1.2px);
+  background-size:90px 90px;
+}
+.shell{max-width:1480px;margin:auto;min-height:100vh;padding:24px}
+.top{display:flex;align-items:center;justify-content:space-between}
+.back{
+  color:#cfe5ff;text-decoration:none;padding:10px 14px;border:1px solid rgba(130,190,255,.2);
+  border-radius:12px;background:rgba(11,24,41,.45)
+}
+.logo{font-size:18px;color:#cce5ff}
+.hero{margin:38px 0 22px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px}
+.hero h1{
+  font-size:48px;margin:0;background:linear-gradient(180deg,#fff,#8fd5ff 72%,#817fff);
+  -webkit-background-clip:text;color:transparent
+}
+.hero p{font-size:18px;color:#aabbd1;margin:8px 0 0}
+.badge{
+  display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;
+  background:rgba(28,85,122,.42);border:1px solid rgba(109,226,255,.2);color:#bdefff;font-size:13px
+}
+.layout{display:grid;grid-template-columns:minmax(360px,.72fr) minmax(0,1.55fr);gap:18px}
+.panel{
+  background:linear-gradient(180deg,rgba(18,39,67,.78),rgba(10,24,43,.84));
+  border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(16px);
+  box-shadow:0 22px 60px rgba(0,0,0,.2)
+}
+.chat{min-height:720px;display:flex;flex-direction:column;overflow:hidden}
+.chat-head,.result-head{
+  padding:17px 20px;border-bottom:1px solid rgba(130,187,255,.12);
+  display:flex;align-items:center;justify-content:space-between
+}
+.status{font-size:13px;color:#9ae9ff}
+.status:before{
+  content:"";display:inline-block;width:8px;height:8px;border-radius:50%;
+  background:#50e7b4;box-shadow:0 0 10px #50e7b4;margin-right:8px
+}
+.messages{
+  padding:20px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:14px;max-height:500px
+}
+.msg{
+  max-width:92%;padding:14px 16px;border-radius:15px;line-height:1.7;white-space:pre-wrap;
+  border:1px solid rgba(112,181,255,.14)
+}
+.ai{align-self:flex-start;background:rgba(41,69,103,.5)}
+.user{align-self:flex-end;background:linear-gradient(135deg,rgba(55,142,255,.38),rgba(108,95,238,.34))}
+.thinking{opacity:.7}
+.composer{padding:16px;border-top:1px solid rgba(130,187,255,.12)}
+.box{
+  display:flex;gap:10px;border:1px solid rgba(105,190,255,.35);border-radius:16px;padding:10px;
+  background:rgba(4,15,29,.5)
+}
+textarea{
+  flex:1;min-height:82px;max-height:170px;resize:vertical;background:transparent;border:none;
+  outline:none;color:#fff;font-size:15px;line-height:1.6
+}
+.send{
+  align-self:flex-end;border:none;border-radius:13px;padding:12px 17px;
+  background:linear-gradient(90deg,#6de7ff,#70bfff 55%,#9b82ff);color:#071525;
+  font-weight:800;cursor:pointer
+}
+.send:disabled{opacity:.45;cursor:not-allowed}
+.quick{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 14px}
+.q{
+  padding:9px 12px;border-radius:999px;border:1px solid rgba(123,181,255,.15);
+  background:rgba(28,49,76,.5);cursor:pointer;color:#c7d7ea;font-size:13px
+}
+.result{min-height:720px;overflow:hidden}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{
+  border:1px solid rgba(113,183,255,.25);background:rgba(31,57,88,.65);color:#dceaff;
+  padding:9px 13px;border-radius:11px;cursor:pointer
+}
+.btn.primary{background:linear-gradient(90deg,#4c9dff,#7d7aff);border:none;color:white}
+.result-body{padding:20px;max-height:calc(100vh - 210px);overflow:auto}
+.empty{
+  min-height:560px;display:grid;place-items:center;text-align:center;color:#7f94af;padding:40px
+}
+.empty strong{display:block;color:#cbd9ea;font-size:20px;margin-bottom:8px}
+.section{margin-bottom:22px}
+.section-title{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:700;margin-bottom:12px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.summary-card{
+  padding:13px 14px;border-radius:13px;background:rgba(28,49,76,.48);
+  border:1px solid rgba(117,169,235,.14)
+}
+.summary-card small{display:block;color:#8398b4;margin-bottom:5px}.summary-card b{font-size:14px}
+.table-wrap{
+  overflow:auto;border:1px solid rgba(109,171,238,.16);border-radius:14px;
+  background:rgba(6,18,32,.35)
+}
+table{width:100%;border-collapse:collapse;min-width:1100px}
+th,td{padding:12px 13px;text-align:left;vertical-align:top;border-bottom:1px solid rgba(116,170,233,.12);line-height:1.55}
+th{
+  position:sticky;top:0;background:#102744;color:#cfe4fb;font-size:13px;z-index:1
+}
+td{font-size:13px;color:#d8e3f0}
+.course{font-weight:700;color:#fff}.teacher{font-weight:700;color:#9fe9ff}
+.source{
+  display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(47,135,190,.2);
+  color:#a8e8ff;font-size:12px
+}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.mini{
+  border:1px solid rgba(112,178,246,.2);background:rgba(23,45,72,.55);color:#bfd2e8;
+  padding:5px 8px;border-radius:8px;cursor:pointer;font-size:11px
+}
+.external{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px
+}
+.ext-card{
+  padding:14px;border:1px solid rgba(255,207,102,.2);background:rgba(91,70,24,.15);border-radius:13px
+}
+.ext-card .notice{color:#ffcf66;font-size:12px;margin-top:8px}
+.list{margin:0;padding-left:20px;color:#c7d5e6;line-height:1.8}
+.toast{
+  position:fixed;right:24px;bottom:24px;background:#10243d;border:1px solid rgba(108,193,255,.35);
+  padding:13px 17px;border-radius:12px;color:#d9efff;display:none;z-index:20
+}
+@media(max-width:1050px){
+  .layout{grid-template-columns:1fr}.chat{min-height:620px}.result{min-height:600px}
+  .result-body{max-height:none}.summary-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:650px){
+  .shell{padding:14px}.hero h1{font-size:38px}.summary-grid{grid-template-columns:1fr}
+  .external{grid-template-columns:1fr}.actions{width:100%}.hero{align-items:flex-start;flex-direction:column}
+}
 </style>
 </head>
 <body>
 <div class="shell">
-  <div class="top"><a class="back" href="./index.html">← 返回工作台</a><div class="logo">My AI · 教研</div></div>
-  <div class="hero"><h1>AI教研助手</h1><p>课程设计｜专题研究｜教研支持</p></div>
+  <div class="top">
+    <a class="back" href="./index.html">← 返回工作台</a>
+    <div class="logo">My AI · 教研</div>
+  </div>
+
+  <div class="hero">
+    <div>
+      <h1>AI教研助手</h1>
+      <p>需求解析｜正式师资匹配｜结构化配课</p>
+    </div>
+    <div class="badge">● CloudBase 正式库驱动</div>
+  </div>
+
   <div class="layout">
     <section class="panel chat">
-      <div class="chat-head"><strong>教研对话</strong><span class="status">DeepSeek 已接入</span></div>
-      <div class="messages" id="messages">
-        <div class="msg ai">你好，我是 AI教研助手。
-
-你可以直接告诉我培训对象、主题、天数、课程方向或现有材料，我会优先从干部教育、专题培训和课程产品化的角度给出结构化建议。</div>
+      <div class="chat-head">
+        <strong>教研对话</strong>
+        <span class="status">已连接数据库</span>
       </div>
+
+      <div class="messages" id="messages">
+        <div class="msg ai">告诉我培训对象、主题、天数和课程方向。我会优先从正式师资课程库中生成结构化课表。</div>
+      </div>
+
+      <div class="quick">
+        <button class="q" onclick="fill('金融机构干部，1天，主题是上海国际金融中心建设与跨境金融，请设计上午和下午两门课，并推荐师资。')">国际金融中心测试</button>
+        <button class="q" onclick="fill('国企中层，3天，AI与数字化转型，每天上午下午各1讲，请生成完整课表。')">AI+数字化</button>
+        <button class="q" onclick="fill('农商行中高层，2天，数字金融、风险管理、AI应用，请设计课程并推荐师资。')">农商行专题</button>
+      </div>
+
       <div class="composer">
         <div class="box">
-          <textarea id="input" placeholder="例如：请为“人工智能赋能干部教育”设计一天专题培训课程框架"></textarea>
-          <button class="send" id="send" onclick="sendMessage()">发送 →</button>
+          <textarea id="input" placeholder="例如：国企中层，3天，AI与数字化转型，每天上午下午各1讲"></textarea>
+          <button class="send" id="send" onclick="sendMessage()">生成 →</button>
         </div>
       </div>
     </section>
-    <aside class="panel side">
-      <h3>快捷任务</h3>
-      <div class="quick">
-        <div class="q" onclick="fill('请根据我接下来提供的培训需求，设计一个结构完整、适合对外使用的专题班课程框架。')"><b>课程框架</b><span>搭建专题班结构</span></div>
-        <div class="q" onclick="fill('请为我接下来提供的培训主题设计10个庄重、简洁、适合干部教育场景的班次名称，并说明推荐理由。')"><b>班次命名</b><span>生成高质量名称</span></div>
-        <div class="q" onclick="fill('请把我接下来提供的课程或项目内容优化为适合正式对外发布的宣传文案。')"><b>宣传文案</b><span>提炼对外表达</span></div>
-        <div class="q" onclick="fill('请诊断我接下来提供的课程安排，指出逻辑、结构、内容重复和落地性问题，并给出优化版本。')"><b>课程优化</b><span>诊断结构和内容</span></div>
+
+    <section class="panel result">
+      <div class="result-head">
+        <strong>方案结果</strong>
+        <div class="actions">
+          <button class="btn" onclick="copyPlan()">复制方案</button>
+          <button class="btn primary" onclick="exportExcel()">导出 Excel</button>
+        </div>
       </div>
-      <div class="tip">当前 V1.0 重点是把真实 AI 调用跑通。暂不做登录、数据库、知识库和文件上传，后续可以逐步加入。</div>
-    </aside>
+
+      <div class="result-body" id="resultBody">
+        <div class="empty">
+          <div>
+            <strong>等待生成方案</strong>
+            输入培训需求后，结果会以结构化课表展示在这里，而不是堆在聊天气泡中。
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-const messagesEl=document.getElementById('messages');
-const input=document.getElementById('input');
-const sendBtn=document.getElementById('send');
-let history=[];
-function fill(text){input.value=text;input.focus()}
-function addMessage(text,role,extra=''){const el=document.createElement('div');el.className=`msg ${role} ${extra}`;el.textContent=text;messagesEl.appendChild(el);messagesEl.scrollTop=messagesEl.scrollHeight;return el}
-async function sendMessage(){
-  const content=input.value.trim(); if(!content||sendBtn.disabled)return;
-  addMessage(content,'user'); history.push({role:'user',content}); input.value=''; sendBtn.disabled=true;
-  const loading=addMessage('正在思考…','ai','thinking');
+const messagesEl = document.getElementById('messages');
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+const resultBody = document.getElementById('resultBody');
+
+let history = [];
+let currentPlan = null;
+
+function esc(v){
+  return String(v ?? '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.display='block';
+  clearTimeout(window.__toast);
+  window.__toast=setTimeout(()=>t.style.display='none',2200);
+}
+
+function fill(text){
+  input.value=text;input.focus();
+}
+
+function addMessage(text,role,extra=''){
+  const el=document.createElement('div');
+  el.className=`msg ${role} ${extra}`;
+  el.textContent=text;
+  messagesEl.appendChild(el);
+  messagesEl.scrollTop=messagesEl.scrollHeight;
+  return el;
+}
+
+function renderPlan(plan){
+  currentPlan = plan;
+
+  if(plan.mode === 'conversation'){
+    resultBody.innerHTML = `
+      <div class="section">
+        <div class="section-title"><span class="dot"></span>教研建议</div>
+        <div class="summary-card">${esc(plan.assistant_message)}</div>
+      </div>`;
+    return;
+  }
+
+  const s = plan.requirement_summary || {};
+  const schedule = Array.isArray(plan.formal_schedule) ? plan.formal_schedule : [];
+  const external = Array.isArray(plan.external_candidates) ? plan.external_candidates : [];
+  const pending = Array.isArray(plan.pending_items) ? plan.pending_items : [];
+  const assumptions = Array.isArray(s.assumptions) ? s.assumptions : [];
+
+  const summaryCards = [
+    ['培训对象', s.audience],
+    ['行业', s.industry],
+    ['主题', s.theme],
+    ['天数', s.days],
+    ['课次', s.sessions],
+    ['培训目标', s.goals]
+  ].map(([k,v])=>`
+    <div class="summary-card"><small>${esc(k)}</small><b>${esc(v || '未明确')}</b></div>
+  `).join('');
+
+  const rows = schedule.map((r,i)=>`
+    <tr>
+      <td>${esc(r.day)}</td>
+      <td>${esc(r.period)}</td>
+      <td>${esc(r.module)}</td>
+      <td class="course">${esc(r.course_title || '待定')}</td>
+      <td>
+        <div class="teacher">${esc(r.teacher_name || '待匹配')}</div>
+        <div>${esc(r.institution || '')}</div>
+        <div style="margin-top:5px"><span class="source">${esc(r.source_type || '')}</span></div>
+        <div class="row-actions">
+          <button class="mini" onclick="reviseRow(${i},'换老师')">换老师</button>
+          <button class="mini" onclick="reviseRow(${i},'换课程')">换课程</button>
+          <button class="mini" onclick="reviseRow(${i},'优化本行')">优化</button>
+        </div>
+      </td>
+      <td>${esc(r.reason)}</td>
+      <td>${esc(r.pending)}</td>
+    </tr>
+  `).join('');
+
+  const externalHtml = external.length ? `
+    <div class="section">
+      <div class="section-title"><span class="dot" style="background:#ffcf66;box-shadow:0 0 10px #ffcf66"></span>外部候选补充</div>
+      <div class="external">
+        ${external.map(x=>`
+          <div class="ext-card">
+            <b>${esc(x.teacher_name)}</b> · ${esc(x.institution)}
+            <div style="margin-top:7px;color:#cbd8e7">${esc(x.suggested_topic)}</div>
+            <div style="margin-top:7px;color:#9fb1c7;font-size:13px">${esc(x.reason)}</div>
+            <div class="notice">${esc(x.notice || '未入正式库，需核验')}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : '';
+
+  const pendingHtml = pending.length || assumptions.length ? `
+    <div class="section">
+      <div class="section-title"><span class="dot"></span>待确认事项</div>
+      <ul class="list">
+        ${[...assumptions.map(x=>'假设：'+x), ...pending].map(x=>`<li>${esc(x)}</li>`).join('')}
+      </ul>
+    </div>` : '';
+
+  resultBody.innerHTML = `
+    <div class="section">
+      <div class="section-title"><span class="dot"></span>需求摘要</div>
+      <div class="summary-grid">${summaryCards}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="dot"></span>正式推荐课表</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>天数</th>
+              <th>时段</th>
+              <th>课程模块</th>
+              <th>课程名称</th>
+              <th>推荐师资</th>
+              <th>推荐理由</th>
+              <th>待确认事项</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || '<tr><td colspan="7">当前正式库没有足够匹配结果。</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    ${externalHtml}
+    ${pendingHtml}
+  `;
+}
+
+async function sendMessage(customText=''){
+  const content=(customText || input.value).trim();
+  if(!content || sendBtn.disabled) return;
+
+  addMessage(content,'user');
+  history.push({role:'user',content});
+  input.value='';
+  sendBtn.disabled=true;
+
+  const loading=addMessage('正在检索正式师资课程库并生成方案…','ai','thinking');
+
   try{
-    const res=await fetch('./api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history.slice(-12)})});
+    const res=await fetch('./api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:history.slice(-12)})
+    });
+
     const data=await res.json();
     loading.remove();
-    if(!res.ok) throw new Error(data.error||'请求失败');
-    addMessage(data.content,'ai'); history.push({role:'assistant',content:data.content});
+
+    if(!res.ok) throw new Error(data.error || '请求失败');
+
+    addMessage(data.assistant_message || '方案已生成，请查看右侧结果。','ai');
+    history.push({
+      role:'assistant',
+      content:JSON.stringify({
+        assistant_message:data.assistant_message,
+        requirement_summary:data.requirement_summary,
+        formal_schedule:data.formal_schedule,
+        external_candidates:data.external_candidates,
+        pending_items:data.pending_items
+      })
+    });
+
+    renderPlan(data);
+
   }catch(err){
-    loading.remove(); addMessage('调用失败：'+err.message+'\n\n请检查 EdgeOne 环境变量 DEEPSEEK_API_KEY 是否已经配置，并重新部署。','ai','error');
-  }finally{sendBtn.disabled=false;input.focus()}
+    loading.remove();
+    addMessage('调用失败：'+err.message,'ai');
+  }finally{
+    sendBtn.disabled=false;
+    input.focus();
+  }
 }
-input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}});
+
+function reviseRow(index, action){
+  if(!currentPlan?.formal_schedule?.[index]) return;
+  const row=currentPlan.formal_schedule[index];
+  const text=`请只修改${row.day || ''}${row.period || ''}这一行：${action}。其他时段尽量保持不变。当前课程为“${row.course_title || ''}”，当前老师为“${row.teacher_name || ''}”。`;
+  input.value=text;
+  input.focus();
+  showToast('修改指令已放入输入框');
+}
+
+function copyPlan(){
+  if(!currentPlan){showToast('还没有可复制的方案');return}
+  const text=JSON.stringify(currentPlan,null,2);
+  navigator.clipboard.writeText(text).then(()=>showToast('方案已复制')).catch(()=>showToast('复制失败'));
+}
+
+function csvCell(v){
+  const s=String(v ?? '').replaceAll('"','""');
+  return `"${s}"`;
+}
+
+function exportExcel(){
+  if(!currentPlan || !Array.isArray(currentPlan.formal_schedule) || !currentPlan.formal_schedule.length){
+    showToast('当前没有可导出的正式课表');
+    return;
+  }
+
+  const headers=['天数','时段','课程模块','课程名称','推荐师资','单位','师资来源','推荐理由','依据','待确认事项'];
+  const lines=[headers.map(csvCell).join(',')];
+
+  for(const r of currentPlan.formal_schedule){
+    lines.push([
+      r.day,r.period,r.module,r.course_title,r.teacher_name,r.institution,
+      r.source_type,r.reason,r.evidence,r.pending
+    ].map(csvCell).join(','));
+  }
+
+  const bom='\uFEFF';
+  const blob=new Blob([bom+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='AI教研助手_正式推荐课表.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('已导出，可直接用 Excel 打开');
+}
+
+input.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){
+    e.preventDefault();
+    sendMessage();
+  }
+});
 </script>
 </body>
 </html>
