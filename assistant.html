@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI教研助手</title>
+<script src="./assets/jszip.min.js"></script>
 <style>
 :root{
-  --bg:#07111f;--panel:rgba(16,33,56,.78);--panel2:rgba(10,24,43,.82);
-  --line:rgba(103,185,255,.28);--text:#f4f8ff;--muted:#95a8c2;
-  --cyan:#6de2ff;--blue:#5c8dff;--violet:#8f7cff;--green:#57e6b2;--warn:#ffcf66;
+  --bg:#07111f;--panel:rgba(16,33,56,.78);--line:rgba(103,185,255,.28);
+  --text:#f4f8ff;--muted:#95a8c2;--cyan:#6de2ff;--blue:#5c8dff;--violet:#8f7cff;
+  --green:#57e6b2;--warn:#ffcf66;
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;background:#07111f;color:var(--text)}
@@ -20,132 +21,64 @@ body{
 body:before{
   content:"";position:fixed;inset:0;pointer-events:none;opacity:.28;
   background-image:radial-gradient(circle,#d9f1ff 0 1px,transparent 1.2px);
-  background-size:90px 90px;
+  background-size:90px 90px
 }
-.shell{max-width:1480px;margin:auto;min-height:100vh;padding:24px}
+.shell{max-width:1500px;margin:auto;min-height:100vh;padding:24px}
 .top{display:flex;align-items:center;justify-content:space-between}
-.back{
-  color:#cfe5ff;text-decoration:none;padding:10px 14px;border:1px solid rgba(130,190,255,.2);
-  border-radius:12px;background:rgba(11,24,41,.45)
-}
+.back{color:#cfe5ff;text-decoration:none;padding:10px 14px;border:1px solid rgba(130,190,255,.2);border-radius:12px;background:rgba(11,24,41,.45)}
 .logo{font-size:18px;color:#cce5ff}
-.hero{margin:38px 0 22px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px}
-.hero h1{
-  font-size:48px;margin:0;background:linear-gradient(180deg,#fff,#8fd5ff 72%,#817fff);
-  -webkit-background-clip:text;color:transparent
-}
+.hero{margin:36px 0 22px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px}
+.hero h1{font-size:48px;margin:0;background:linear-gradient(180deg,#fff,#8fd5ff 72%,#817fff);-webkit-background-clip:text;color:transparent}
 .hero p{font-size:18px;color:#aabbd1;margin:8px 0 0}
-.badge{
-  display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;
-  background:rgba(28,85,122,.42);border:1px solid rgba(109,226,255,.2);color:#bdefff;font-size:13px
-}
-.layout{display:grid;grid-template-columns:minmax(360px,.72fr) minmax(0,1.55fr);gap:18px}
-.panel{
-  background:linear-gradient(180deg,rgba(18,39,67,.78),rgba(10,24,43,.84));
-  border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(16px);
-  box-shadow:0 22px 60px rgba(0,0,0,.2)
-}
-.chat{min-height:720px;display:flex;flex-direction:column;overflow:hidden}
-.chat-head,.result-head{
-  padding:17px 20px;border-bottom:1px solid rgba(130,187,255,.12);
-  display:flex;align-items:center;justify-content:space-between
-}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(28,85,122,.42);border:1px solid rgba(109,226,255,.2);color:#bdefff;font-size:13px}
+.layout{display:grid;grid-template-columns:minmax(360px,.7fr) minmax(0,1.55fr);gap:18px}
+.panel{background:linear-gradient(180deg,rgba(18,39,67,.78),rgba(10,24,43,.84));border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(16px);box-shadow:0 22px 60px rgba(0,0,0,.2)}
+.chat{min-height:730px;display:flex;flex-direction:column;overflow:hidden}
+.chat-head,.result-head{padding:17px 20px;border-bottom:1px solid rgba(130,187,255,.12);display:flex;align-items:center;justify-content:space-between}
 .status{font-size:13px;color:#9ae9ff}
-.status:before{
-  content:"";display:inline-block;width:8px;height:8px;border-radius:50%;
-  background:#50e7b4;box-shadow:0 0 10px #50e7b4;margin-right:8px
-}
-.messages{
-  padding:20px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:14px;max-height:500px
-}
-.msg{
-  max-width:92%;padding:14px 16px;border-radius:15px;line-height:1.7;white-space:pre-wrap;
-  border:1px solid rgba(112,181,255,.14)
-}
+.status:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#50e7b4;box-shadow:0 0 10px #50e7b4;margin-right:8px}
+.messages{padding:20px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:14px;max-height:505px}
+.msg{max-width:92%;padding:14px 16px;border-radius:15px;line-height:1.7;white-space:pre-wrap;border:1px solid rgba(112,181,255,.14)}
 .ai{align-self:flex-start;background:rgba(41,69,103,.5)}
 .user{align-self:flex-end;background:linear-gradient(135deg,rgba(55,142,255,.38),rgba(108,95,238,.34))}
 .thinking{opacity:.7}
 .composer{padding:16px;border-top:1px solid rgba(130,187,255,.12)}
-.box{
-  display:flex;gap:10px;border:1px solid rgba(105,190,255,.35);border-radius:16px;padding:10px;
-  background:rgba(4,15,29,.5)
-}
-textarea{
-  flex:1;min-height:82px;max-height:170px;resize:vertical;background:transparent;border:none;
-  outline:none;color:#fff;font-size:15px;line-height:1.6
-}
-.send{
-  align-self:flex-end;border:none;border-radius:13px;padding:12px 17px;
-  background:linear-gradient(90deg,#6de7ff,#70bfff 55%,#9b82ff);color:#071525;
-  font-weight:800;cursor:pointer
-}
+.box{display:flex;gap:10px;border:1px solid rgba(105,190,255,.35);border-radius:16px;padding:10px;background:rgba(4,15,29,.5)}
+textarea{flex:1;min-height:82px;max-height:170px;resize:vertical;background:transparent;border:none;outline:none;color:#fff;font-size:15px;line-height:1.6}
+.send{align-self:flex-end;border:none;border-radius:13px;padding:12px 17px;background:linear-gradient(90deg,#6de7ff,#70bfff 55%,#9b82ff);color:#071525;font-weight:800;cursor:pointer}
 .send:disabled{opacity:.45;cursor:not-allowed}
 .quick{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 14px}
-.q{
-  padding:9px 12px;border-radius:999px;border:1px solid rgba(123,181,255,.15);
-  background:rgba(28,49,76,.5);cursor:pointer;color:#c7d7ea;font-size:13px
-}
-.result{min-height:720px;overflow:hidden}
-.actions{display:flex;gap:10px;flex-wrap:wrap}
-.btn{
-  border:1px solid rgba(113,183,255,.25);background:rgba(31,57,88,.65);color:#dceaff;
-  padding:9px 13px;border-radius:11px;cursor:pointer
-}
+.q{padding:9px 12px;border-radius:999px;border:1px solid rgba(123,181,255,.15);background:rgba(28,49,76,.5);cursor:pointer;color:#c7d7ea;font-size:13px}
+.result{min-height:730px;overflow:hidden}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid rgba(113,183,255,.25);background:rgba(31,57,88,.65);color:#dceaff;padding:9px 12px;border-radius:11px;cursor:pointer}
 .btn.primary{background:linear-gradient(90deg,#4c9dff,#7d7aff);border:none;color:white}
-.result-body{padding:20px;max-height:calc(100vh - 210px);overflow:auto}
-.empty{
-  min-height:560px;display:grid;place-items:center;text-align:center;color:#7f94af;padding:40px
-}
+.result-body{padding:20px;max-height:calc(100vh - 205px);overflow:auto}
+.empty{min-height:570px;display:grid;place-items:center;text-align:center;color:#7f94af;padding:40px}
 .empty strong{display:block;color:#cbd9ea;font-size:20px;margin-bottom:8px}
 .section{margin-bottom:22px}
 .section-title{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:700;margin-bottom:12px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
 .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.summary-card{
-  padding:13px 14px;border-radius:13px;background:rgba(28,49,76,.48);
-  border:1px solid rgba(117,169,235,.14)
-}
+.summary-card{padding:13px 14px;border-radius:13px;background:rgba(28,49,76,.48);border:1px solid rgba(117,169,235,.14)}
 .summary-card small{display:block;color:#8398b4;margin-bottom:5px}.summary-card b{font-size:14px}
-.table-wrap{
-  overflow:auto;border:1px solid rgba(109,171,238,.16);border-radius:14px;
-  background:rgba(6,18,32,.35)
-}
-table{width:100%;border-collapse:collapse;min-width:1100px}
+.table-wrap{overflow:auto;border:1px solid rgba(109,171,238,.16);border-radius:14px;background:rgba(6,18,32,.35)}
+table{width:100%;border-collapse:collapse;min-width:1000px}
 th,td{padding:12px 13px;text-align:left;vertical-align:top;border-bottom:1px solid rgba(116,170,233,.12);line-height:1.55}
-th{
-  position:sticky;top:0;background:#102744;color:#cfe4fb;font-size:13px;z-index:1
-}
+th{position:sticky;top:0;background:#102744;color:#cfe4fb;font-size:13px;z-index:1}
 td{font-size:13px;color:#d8e3f0}
 .course{font-weight:700;color:#fff}.teacher{font-weight:700;color:#9fe9ff}
-.source{
-  display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(47,135,190,.2);
-  color:#a8e8ff;font-size:12px
-}
+.source{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(47,135,190,.2);color:#a8e8ff;font-size:12px}
 .row-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.mini{
-  border:1px solid rgba(112,178,246,.2);background:rgba(23,45,72,.55);color:#bfd2e8;
-  padding:5px 8px;border-radius:8px;cursor:pointer;font-size:11px
-}
-.external{
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px
-}
-.ext-card{
-  padding:14px;border:1px solid rgba(255,207,102,.2);background:rgba(91,70,24,.15);border-radius:13px
-}
+.mini{border:1px solid rgba(112,178,246,.2);background:rgba(23,45,72,.55);color:#bfd2e8;padding:5px 8px;border-radius:8px;cursor:pointer;font-size:11px}
+.evidence{margin-top:8px;border-top:1px dashed rgba(124,183,244,.2);padding-top:7px;color:#93a8c1;font-size:12px}
+.evidence summary{cursor:pointer;color:#87dfff}
+.external{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ext-card{padding:14px;border:1px solid rgba(255,207,102,.2);background:rgba(91,70,24,.15);border-radius:13px}
 .ext-card .notice{color:#ffcf66;font-size:12px;margin-top:8px}
-.list{margin:0;padding-left:20px;color:#c7d5e6;line-height:1.8}
-.toast{
-  position:fixed;right:24px;bottom:24px;background:#10243d;border:1px solid rgba(108,193,255,.35);
-  padding:13px 17px;border-radius:12px;color:#d9efff;display:none;z-index:20
-}
-@media(max-width:1050px){
-  .layout{grid-template-columns:1fr}.chat{min-height:620px}.result{min-height:600px}
-  .result-body{max-height:none}.summary-grid{grid-template-columns:repeat(2,1fr)}
-}
-@media(max-width:650px){
-  .shell{padding:14px}.hero h1{font-size:38px}.summary-grid{grid-template-columns:1fr}
-  .external{grid-template-columns:1fr}.actions{width:100%}.hero{align-items:flex-start;flex-direction:column}
-}
+.toast{position:fixed;right:24px;bottom:24px;background:#10243d;border:1px solid rgba(108,193,255,.35);padding:13px 17px;border-radius:12px;color:#d9efff;display:none;z-index:20}
+@media(max-width:1050px){.layout{grid-template-columns:1fr}.chat{min-height:620px}.result{min-height:600px}.result-body{max-height:none}.summary-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.shell{padding:14px}.hero h1{font-size:38px}.summary-grid{grid-template-columns:1fr}.external{grid-template-columns:1fr}.actions{width:100%}.hero{align-items:flex-start;flex-direction:column}}
 </style>
 </head>
 <body>
@@ -158,7 +91,7 @@ td{font-size:13px;color:#d8e3f0}
   <div class="hero">
     <div>
       <h1>AI教研助手</h1>
-      <p>需求解析｜正式师资匹配｜结构化配课</p>
+      <p>需求确认｜正式师资匹配｜结构化配课｜成果导出</p>
     </div>
     <div class="badge">● CloudBase 正式库驱动</div>
   </div>
@@ -171,7 +104,7 @@ td{font-size:13px;color:#d8e3f0}
       </div>
 
       <div class="messages" id="messages">
-        <div class="msg ai">告诉我培训对象、主题、天数和课程方向。我会优先从正式师资课程库中生成结构化课表。</div>
+        <div class="msg ai">告诉我培训对象、主题和天数。关键条件缺失时，我会先在对话里一次性问清楚，再生成正式课表。</div>
       </div>
 
       <div class="quick">
@@ -183,25 +116,26 @@ td{font-size:13px;color:#d8e3f0}
       <div class="composer">
         <div class="box">
           <textarea id="input" placeholder="例如：国企中层，3天，AI与数字化转型，每天上午下午各1讲"></textarea>
-          <button class="send" id="send" onclick="sendMessage()">生成 →</button>
+          <button class="send" id="send" onclick="sendMessage()">发送 →</button>
         </div>
       </div>
     </section>
 
     <section class="panel result">
       <div class="result-head">
-        <strong>方案结果</strong>
+        <strong>正式方案</strong>
         <div class="actions">
-          <button class="btn" onclick="copyPlan()">复制方案</button>
-          <button class="btn primary" onclick="exportExcel()">导出 Excel</button>
+          <button class="btn" onclick="copyFormatted()">复制文本</button>
+          <button class="btn" onclick="exportDocx()">下载 Word</button>
+          <button class="btn primary" onclick="exportXlsx()">下载 Excel</button>
         </div>
       </div>
 
       <div class="result-body" id="resultBody">
         <div class="empty">
           <div>
-            <strong>等待生成方案</strong>
-            输入培训需求后，结果会以结构化课表展示在这里，而不是堆在聊天气泡中。
+            <strong>等待生成正式方案</strong>
+            对话确认完成后，课表会在这里结构化展示，并可直接下载 Word / Excel。
           </div>
         </div>
       </div>
@@ -212,20 +146,29 @@ td{font-size:13px;color:#d8e3f0}
 <div class="toast" id="toast"></div>
 
 <script>
-const messagesEl = document.getElementById('messages');
-const input = document.getElementById('input');
-const sendBtn = document.getElementById('send');
-const resultBody = document.getElementById('resultBody');
+const messagesEl=document.getElementById('messages');
+const input=document.getElementById('input');
+const sendBtn=document.getElementById('send');
+const resultBody=document.getElementById('resultBody');
 
-let history = [];
-let currentPlan = null;
+let history=[];
+let currentPlan=null;
 
 function esc(v){
-  return String(v ?? '')
+  return String(v??'')
     .replaceAll('&','&amp;')
     .replaceAll('<','&lt;')
     .replaceAll('>','&gt;')
     .replaceAll('"','&quot;');
+}
+
+function xmlEsc(v){
+  return String(v??'')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&apos;");
 }
 
 function showToast(msg){
@@ -235,9 +178,7 @@ function showToast(msg){
   window.__toast=setTimeout(()=>t.style.display='none',2200);
 }
 
-function fill(text){
-  input.value=text;input.focus();
-}
+function fill(text){input.value=text;input.focus()}
 
 function addMessage(text,role,extra=''){
   const el=document.createElement('div');
@@ -249,56 +190,55 @@ function addMessage(text,role,extra=''){
 }
 
 function renderPlan(plan){
-  currentPlan = plan;
+  currentPlan=plan;
 
-  if(plan.mode === 'conversation'){
-    resultBody.innerHTML = `
-      <div class="section">
-        <div class="section-title"><span class="dot"></span>教研建议</div>
-        <div class="summary-card">${esc(plan.assistant_message)}</div>
-      </div>`;
+  if(plan.mode==='clarify'){
     return;
   }
 
-  const s = plan.requirement_summary || {};
-  const schedule = Array.isArray(plan.formal_schedule) ? plan.formal_schedule : [];
-  const external = Array.isArray(plan.external_candidates) ? plan.external_candidates : [];
-  const pending = Array.isArray(plan.pending_items) ? plan.pending_items : [];
-  const assumptions = Array.isArray(s.assumptions) ? s.assumptions : [];
+  const s=plan.requirement_summary||{};
+  const schedule=Array.isArray(plan.formal_schedule)?plan.formal_schedule:[];
+  const external=Array.isArray(plan.external_candidates)?plan.external_candidates:[];
 
-  const summaryCards = [
-    ['培训对象', s.audience],
-    ['行业', s.industry],
-    ['主题', s.theme],
-    ['天数', s.days],
-    ['课次', s.sessions],
-    ['培训目标', s.goals]
+  const summaryCards=[
+    ['培训对象',s.audience],
+    ['行业',s.industry],
+    ['主题',s.theme],
+    ['天数',s.days],
+    ['课次',s.sessions],
+    ['培训目标',s.goals]
   ].map(([k,v])=>`
-    <div class="summary-card"><small>${esc(k)}</small><b>${esc(v || '未明确')}</b></div>
+    <div class="summary-card"><small>${esc(k)}</small><b>${esc(v||'—')}</b></div>
   `).join('');
 
-  const rows = schedule.map((r,i)=>`
+  const rows=schedule.map((r,i)=>`
     <tr>
       <td>${esc(r.day)}</td>
       <td>${esc(r.period)}</td>
       <td>${esc(r.module)}</td>
-      <td class="course">${esc(r.course_title || '待定')}</td>
+      <td class="course">${esc(r.course_title||'待匹配')}</td>
       <td>
-        <div class="teacher">${esc(r.teacher_name || '待匹配')}</div>
-        <div>${esc(r.institution || '')}</div>
-        <div style="margin-top:5px"><span class="source">${esc(r.source_type || '')}</span></div>
+        <div class="teacher">${esc(r.teacher_name||'待匹配')}</div>
+        <div>${esc(r.institution||'')}</div>
+        ${r.source_type?`<div style="margin-top:5px"><span class="source">${esc(r.source_type)}</span></div>`:''}
         <div class="row-actions">
           <button class="mini" onclick="reviseRow(${i},'换老师')">换老师</button>
           <button class="mini" onclick="reviseRow(${i},'换课程')">换课程</button>
           <button class="mini" onclick="reviseRow(${i},'优化本行')">优化</button>
         </div>
       </td>
-      <td>${esc(r.reason)}</td>
-      <td>${esc(r.pending)}</td>
+      <td>
+        ${esc(r.reason||'')}
+        ${r.evidence?`
+          <details class="evidence">
+            <summary>查看依据</summary>
+            <div>${esc(r.evidence)}</div>
+          </details>`:''}
+      </td>
     </tr>
   `).join('');
 
-  const externalHtml = external.length ? `
+  const externalHtml=external.length?`
     <div class="section">
       <div class="section-title"><span class="dot" style="background:#ffcf66;box-shadow:0 0 10px #ffcf66"></span>外部候选补充</div>
       <div class="external">
@@ -307,21 +247,13 @@ function renderPlan(plan){
             <b>${esc(x.teacher_name)}</b> · ${esc(x.institution)}
             <div style="margin-top:7px;color:#cbd8e7">${esc(x.suggested_topic)}</div>
             <div style="margin-top:7px;color:#9fb1c7;font-size:13px">${esc(x.reason)}</div>
-            <div class="notice">${esc(x.notice || '未入正式库，需核验')}</div>
+            <div class="notice">${esc(x.notice||'未入正式库，需核验')}</div>
           </div>
         `).join('')}
       </div>
-    </div>` : '';
+    </div>`:'';
 
-  const pendingHtml = pending.length || assumptions.length ? `
-    <div class="section">
-      <div class="section-title"><span class="dot"></span>待确认事项</div>
-      <ul class="list">
-        ${[...assumptions.map(x=>'假设：'+x), ...pending].map(x=>`<li>${esc(x)}</li>`).join('')}
-      </ul>
-    </div>` : '';
-
-  resultBody.innerHTML = `
+  resultBody.innerHTML=`
     <div class="section">
       <div class="section-title"><span class="dot"></span>需求摘要</div>
       <div class="summary-grid">${summaryCards}</div>
@@ -338,56 +270,50 @@ function renderPlan(plan){
               <th>课程模块</th>
               <th>课程名称</th>
               <th>推荐师资</th>
-              <th>推荐理由</th>
-              <th>待确认事项</th>
+              <th>推荐理由 / 依据</th>
             </tr>
           </thead>
           <tbody>
-            ${rows || '<tr><td colspan="7">当前正式库没有足够匹配结果。</td></tr>'}
+            ${rows||'<tr><td colspan="6">当前正式库没有足够匹配结果。</td></tr>'}
           </tbody>
         </table>
       </div>
     </div>
 
     ${externalHtml}
-    ${pendingHtml}
   `;
 }
 
 async function sendMessage(customText=''){
-  const content=(customText || input.value).trim();
-  if(!content || sendBtn.disabled) return;
+  const content=(customText||input.value).trim();
+  if(!content||sendBtn.disabled)return;
 
   addMessage(content,'user');
   history.push({role:'user',content});
   input.value='';
   sendBtn.disabled=true;
 
-  const loading=addMessage('正在检索正式师资课程库并生成方案…','ai','thinking');
+  const loading=addMessage('正在分析需求并检索正式师资课程库…','ai','thinking');
 
   try{
     const res=await fetch('./api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({messages:history.slice(-12)})
+      body:JSON.stringify({messages:history.slice(-16)})
     });
 
     const data=await res.json();
     loading.remove();
 
-    if(!res.ok) throw new Error(data.error || '请求失败');
+    if(!res.ok)throw new Error(data.error||'请求失败');
 
-    addMessage(data.assistant_message || '方案已生成，请查看右侧结果。','ai');
-    history.push({
-      role:'assistant',
-      content:JSON.stringify({
-        assistant_message:data.assistant_message,
-        requirement_summary:data.requirement_summary,
-        formal_schedule:data.formal_schedule,
-        external_candidates:data.external_candidates,
-        pending_items:data.pending_items
-      })
-    });
+    addMessage(data.assistant_message||'已处理。','ai');
+    history.push({role:'assistant',content:data.assistant_message||''});
+
+    if(data.mode==='clarify'){
+      input.focus();
+      return;
+    }
 
     renderPlan(data);
 
@@ -400,53 +326,308 @@ async function sendMessage(customText=''){
   }
 }
 
-function reviseRow(index, action){
-  if(!currentPlan?.formal_schedule?.[index]) return;
-  const row=currentPlan.formal_schedule[index];
-  const text=`请只修改${row.day || ''}${row.period || ''}这一行：${action}。其他时段尽量保持不变。当前课程为“${row.course_title || ''}”，当前老师为“${row.teacher_name || ''}”。`;
-  input.value=text;
+function reviseRow(index,action){
+  if(!currentPlan?.formal_schedule?.[index])return;
+  const r=currentPlan.formal_schedule[index];
+  input.value=`请只修改${r.day||''}${r.period||''}这一行：${action}。其他时段保持不变。当前课程“${r.course_title||''}”，当前老师“${r.teacher_name||''}”。`;
   input.focus();
   showToast('修改指令已放入输入框');
 }
 
-function copyPlan(){
-  if(!currentPlan){showToast('还没有可复制的方案');return}
-  const text=JSON.stringify(currentPlan,null,2);
-  navigator.clipboard.writeText(text).then(()=>showToast('方案已复制')).catch(()=>showToast('复制失败'));
-}
+function planText(){
+  if(!currentPlan)return '';
 
-function csvCell(v){
-  const s=String(v ?? '').replaceAll('"','""');
-  return `"${s}"`;
-}
+  const s=currentPlan.requirement_summary||{};
+  const lines=[];
+  lines.push('AI教研助手课程方案');
+  lines.push('');
+  lines.push('一、培训需求概览');
+  if(s.audience)lines.push(`培训对象：${s.audience}`);
+  if(s.industry)lines.push(`行业：${s.industry}`);
+  if(s.theme)lines.push(`培训主题：${s.theme}`);
+  if(s.days)lines.push(`培训天数：${s.days}`);
+  if(s.sessions)lines.push(`课程安排：${s.sessions}`);
+  if(s.goals)lines.push(`培训目标：${s.goals}`);
+  lines.push('');
+  lines.push('二、正式推荐课表');
 
-function exportExcel(){
-  if(!currentPlan || !Array.isArray(currentPlan.formal_schedule) || !currentPlan.formal_schedule.length){
-    showToast('当前没有可导出的正式课表');
-    return;
+  (currentPlan.formal_schedule||[]).forEach((r,i)=>{
+    lines.push(`${i+1}. ${r.day||''} ${r.period||''}`);
+    lines.push(`课程模块：${r.module||''}`);
+    lines.push(`课程名称：${r.course_title||'待匹配'}`);
+    lines.push(`推荐师资：${r.teacher_name||'待匹配'}${r.institution?'｜'+r.institution:''}`);
+    if(r.source_type)lines.push(`师资来源：${r.source_type}`);
+    if(r.reason)lines.push(`推荐理由：${r.reason}`);
+    if(r.evidence)lines.push(`推荐依据：${r.evidence}`);
+    lines.push('');
+  });
+
+  const ext=currentPlan.external_candidates||[];
+  if(ext.length){
+    lines.push('三、外部候选补充');
+    ext.forEach((x,i)=>{
+      lines.push(`${i+1}. ${x.teacher_name||''}｜${x.institution||''}`);
+      if(x.suggested_topic)lines.push(`建议方向：${x.suggested_topic}`);
+      if(x.reason)lines.push(`推荐理由：${x.reason}`);
+      lines.push(`说明：${x.notice||'未入正式库，需核验'}`);
+      lines.push('');
+    });
   }
 
-  const headers=['天数','时段','课程模块','课程名称','推荐师资','单位','师资来源','推荐理由','依据','待确认事项'];
-  const lines=[headers.map(csvCell).join(',')];
+  return lines.join('\n');
+}
 
-  for(const r of currentPlan.formal_schedule){
-    lines.push([
-      r.day,r.period,r.module,r.course_title,r.teacher_name,r.institution,
-      r.source_type,r.reason,r.evidence,r.pending
-    ].map(csvCell).join(','));
+async function copyFormatted(){
+  if(!currentPlan){showToast('还没有可复制的正式方案');return}
+  try{
+    await navigator.clipboard.writeText(planText());
+    showToast('已复制排版文本');
+  }catch{
+    showToast('复制失败');
   }
+}
 
-  const bom='\uFEFF';
-  const blob=new Blob([bom+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+function downloadBlob(blob,filename){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;
-  a.download='AI教研助手_正式推荐课表.csv';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
   URL.revokeObjectURL(url);
-  showToast('已导出，可直接用 Excel 打开');
+}
+
+function excelColName(n){
+  let s='';
+  while(n>0){
+    n--;
+    s=String.fromCharCode(65+(n%26))+s;
+    n=Math.floor(n/26);
+  }
+  return s;
+}
+
+function sheetXml(rows,widths=[]){
+  const cols=widths.length
+    ? `<cols>${widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols>`
+    :'';
+
+  const sheetData=rows.map((row,ri)=>{
+    const cells=row.map((v,ci)=>{
+      const ref=`${excelColName(ci+1)}${ri+1}`;
+      return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(v)}</t></is></c>`;
+    }).join('');
+    return `<row r="${ri+1}">${cells}</row>`;
+  }).join('');
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+${cols}
+<sheetData>${sheetData}</sheetData>
+</worksheet>`;
+}
+
+async function exportXlsx(){
+  if(!currentPlan){showToast('还没有可导出的正式方案');return}
+
+  const zip=new JSZip();
+
+  const formalRows=[
+    ['天数','时段','课程模块','课程名称','推荐师资','单位','师资来源','推荐理由','推荐依据']
+  ];
+
+  (currentPlan.formal_schedule||[]).forEach(r=>{
+    formalRows.push([
+      r.day||'',r.period||'',r.module||'',r.course_title||'待匹配',
+      r.teacher_name||'待匹配',r.institution||'',r.source_type||'',
+      r.reason||'',r.evidence||''
+    ]);
+  });
+
+  const externalRows=[['姓名','单位','师资来源','建议专题/课程','推荐理由','核验说明']];
+  (currentPlan.external_candidates||[]).forEach(x=>{
+    externalRows.push([
+      x.teacher_name||'',x.institution||'',x.source_type||'',
+      x.suggested_topic||'',x.reason||'',x.notice||'未入正式库，需核验'
+    ]);
+  });
+
+  const s=currentPlan.requirement_summary||{};
+  const infoRows=[
+    ['项目','内容'],
+    ['培训对象',s.audience||''],
+    ['行业',s.industry||''],
+    ['培训主题',s.theme||''],
+    ['培训天数',s.days||''],
+    ['课程安排',s.sessions||''],
+    ['培训目标',s.goals||''],
+    ['数据说明','正式课表仅使用已确认的库内师资课程关系；外部候选单独列示。']
+  ];
+
+  zip.file('[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+</Types>`);
+
+  zip.folder('_rels').file('.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`);
+
+  zip.folder('xl').file('workbook.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+ xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets>
+<sheet name="正式推荐课表" sheetId="1" r:id="rId1"/>
+<sheet name="外部候选补充" sheetId="2" r:id="rId2"/>
+<sheet name="方案说明" sheetId="3" r:id="rId3"/>
+</sheets>
+</workbook>`);
+
+  zip.folder('xl').folder('_rels').file('workbook.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>
+</Relationships>`);
+
+  zip.folder('xl').folder('worksheets').file('sheet1.xml',sheetXml(formalRows,[10,10,22,34,16,28,14,46,46]));
+  zip.folder('xl').folder('worksheets').file('sheet2.xml',sheetXml(externalRows,[16,28,14,34,46,24]));
+  zip.folder('xl').folder('worksheets').file('sheet3.xml',sheetXml(infoRows,[18,70]));
+
+  const blob=await zip.generateAsync({
+    type:'blob',
+    mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+
+  downloadBlob(blob,'AI教研助手_课程方案.xlsx');
+  showToast('Excel 已生成');
+}
+
+function wParagraph(text,bold=false,size=22){
+  return `<w:p><w:r>${bold?'<w:rPr><w:b/><w:sz w:val="'+size+'"/></w:rPr>':''}<w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r></w:p>`;
+}
+
+function wTable(rows){
+  const body=rows.map((row,ri)=>{
+    const cells=row.map(v=>`<w:tc>
+<w:tcPr><w:tcW w:w="2000" w:type="dxa"/></w:tcPr>
+<w:p><w:r>${ri===0?'<w:rPr><w:b/></w:rPr>':''}<w:t xml:space="preserve">${xmlEsc(v)}</w:t></w:r></w:p>
+</w:tc>`).join('');
+    return `<w:tr>${cells}</w:tr>`;
+  }).join('');
+
+  return `<w:tbl>
+<w:tblPr>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:color="B7C9E2"/>
+<w:left w:val="single" w:sz="4" w:color="B7C9E2"/>
+<w:bottom w:val="single" w:sz="4" w:color="B7C9E2"/>
+<w:right w:val="single" w:sz="4" w:color="B7C9E2"/>
+<w:insideH w:val="single" w:sz="4" w:color="D8E3F0"/>
+<w:insideV w:val="single" w:sz="4" w:color="D8E3F0"/>
+</w:tblBorders>
+</w:tblPr>${body}</w:tbl>`;
+}
+
+async function exportDocx(){
+  if(!currentPlan){showToast('还没有可导出的正式方案');return}
+
+  const zip=new JSZip();
+  const s=currentPlan.requirement_summary||{};
+
+  let doc='';
+  doc+=wParagraph('AI教研助手课程方案',true,32);
+  doc+=wParagraph('');
+  doc+=wParagraph('一、培训需求概览',true,26);
+
+  const info=[
+    ['培训对象',s.audience||''],
+    ['行业',s.industry||''],
+    ['培训主题',s.theme||''],
+    ['培训天数',s.days||''],
+    ['课程安排',s.sessions||''],
+    ['培训目标',s.goals||'']
+  ].filter(x=>x[1]);
+  doc+=wTable([['项目','内容'],...info]);
+
+  doc+=wParagraph('');
+  doc+=wParagraph('二、正式推荐课表',true,26);
+
+  const scheduleRows=[
+    ['天数/时段','课程模块','课程名称','推荐师资','推荐理由']
+  ];
+
+  (currentPlan.formal_schedule||[]).forEach(r=>{
+    scheduleRows.push([
+      `${r.day||''} ${r.period||''}`.trim(),
+      r.module||'',
+      r.course_title||'待匹配',
+      `${r.teacher_name||'待匹配'}${r.institution?'｜'+r.institution:''}`,
+      r.reason||''
+    ]);
+  });
+  doc+=wTable(scheduleRows);
+
+  const ext=currentPlan.external_candidates||[];
+  if(ext.length){
+    doc+=wParagraph('');
+    doc+=wParagraph('三、外部候选补充',true,26);
+    ext.forEach((x,i)=>{
+      doc+=wParagraph(`${i+1}. ${x.teacher_name||''}｜${x.institution||''}`,true,22);
+      if(x.suggested_topic)doc+=wParagraph(`建议专题：${x.suggested_topic}`);
+      if(x.reason)doc+=wParagraph(`推荐理由：${x.reason}`);
+      doc+=wParagraph(`说明：${x.notice||'未入正式库，需核验'}`);
+    });
+  }
+
+  // Future teacher profiles can be included only when verified/profile data exists.
+  const profiles=Array.isArray(currentPlan.teacher_profiles)?currentPlan.teacher_profiles:[];
+  if(profiles.length){
+    doc+=wParagraph('');
+    doc+=wParagraph(ext.length?'四、推荐师资简介':'三、推荐师资简介',true,26);
+    profiles.forEach(p=>{
+      doc+=wParagraph(p.teacher_name||'',true,22);
+      if(p.profile)doc+=wParagraph(p.profile);
+      if(p.profile_source_label)doc+=wParagraph(`资料来源：${p.profile_source_label}`);
+    });
+  }
+
+  const documentXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:body>
+${doc}
+<w:sectPr>
+<w:pgSz w:w="11906" w:h="16838"/>
+<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>
+</w:sectPr>
+</w:body>
+</w:document>`;
+
+  zip.file('[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`);
+
+  zip.folder('_rels').file('.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`);
+
+  zip.folder('word').file('document.xml',documentXml);
+
+  const blob=await zip.generateAsync({
+    type:'blob',
+    mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+
+  downloadBlob(blob,'AI教研助手_课程方案.docx');
+  showToast('Word 已生成');
 }
 
 input.addEventListener('keydown',e=>{
