@@ -1,13 +1,14 @@
 const SYSTEM_PROMPT = `你是“AI教研助手”，服务于培训、干部教育、终身教育、企业培训等教研场景。
 
-规则：
+核心事实规则：
 1. 正式课表只能使用服务端提供的 formal_candidates。
-2. 不得编造老师、单位、课程名称、来源或教师课程关系。
+2. formal_candidates 已由服务端限定为：库内师资 + active 教师 + active 课程 + confirmed 教师课程关系。
 3. external_candidates 只能作为外部候选补充，不能进入正式课表。
-4. 如果正式候选不足，对应时段写“待匹配”。
-5. 推荐理由面向业务人员写清楚“为什么匹配”，不要大段展示内部字段名。
-6. 使用简体中文。
-7. 必须输出严格 JSON，不要 Markdown，不要 JSON 之外的文字。`;
+4. 不得编造数据库中不存在的老师、单位、课程名称、教师课程关系、学历、职务、兼职、成果、荣誉或来源。
+5. 数据库没有合适正式师资时，对应时段写“待匹配”，绝不能虚构。
+6. 师资简介仅当服务端提供了有依据的 profile 时才可以使用；没有则省略。
+7. 使用简体中文。
+8. 必须输出严格 JSON，不要输出 Markdown 代码块或 JSON 之外的文字。`;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -22,6 +23,7 @@ function json(data, status = 200) {
 async function cloudbaseGet(envId, apiKey, table, query = "") {
   const base = `https://${envId}.api.tcloudbasegateway.com/v1/rdb/rest/${table}`;
   const url = query ? `${base}?${query}` : base;
+
   const res = await fetch(url, {
     method: "GET",
     headers: {
@@ -31,10 +33,15 @@ async function cloudbaseGet(envId, apiKey, table, query = "") {
   });
 
   const text = await res.text();
-  if (!res.ok) throw new Error(`CloudBase ${table} 查询失败 ${res.status}: ${text.slice(0, 300)}`);
+  if (!res.ok) {
+    throw new Error(`CloudBase ${table} 查询失败 ${res.status}: ${text.slice(0, 300)}`);
+  }
 
-  try { return JSON.parse(text); }
-  catch { throw new Error(`CloudBase ${table} 返回非 JSON 数据`); }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`CloudBase ${table} 返回非 JSON 数据`);
+  }
 }
 
 function extractJson(text) {
@@ -69,52 +76,85 @@ async function callDeepSeek(apiKey, messages, maxTokens = 1800) {
   return data?.choices?.[0]?.message?.content || "";
 }
 
-function parseDays(text) {
-  const m = text.match(/(\d+)\s*天/);
-  return m ? Math.max(1, Number(m[1])) : 1;
+function cnNum(n) {
+  const map = { "一":1,"二":2,"两":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9,"十":10 };
+  return map[n] || null;
 }
 
-function guessSessions(text, days) {
-  if (/上午.*下午|上午和下午|上午下午|每天.*2\s*讲|每天.*两\s*讲|各\s*1\s*讲|各一讲/.test(text)) return days * 2;
-  const m = text.match(/(\d+)\s*(?:讲|门课|课次)/);
+function parseDaysFromText(text) {
+  let m = text.match(/(\d+)\s*天/);
   if (m) return Math.max(1, Number(m[1]));
-  return days === 1 ? 2 : days * 2;
+  m = text.match(/([一二两三四五六七八九十])\s*天/);
+  if (m) return cnNum(m[1]);
+  return null;
+}
+
+function parseExplicitSessions(text) {
+  let m = text.match(/(\d+)\s*(?:讲|门课|课次)/);
+  if (m) return Math.max(1, Number(m[1]));
+  if (/上午.*下午|上午和下午|上午下午|各\s*1\s*讲|各一讲|每天.*两讲|每天.*2\s*讲/.test(text)) {
+    const days = parseDaysFromText(text);
+    return days ? days * 2 : null;
+  }
+  return null;
+}
+
+function inferAudience(text) {
+  const patterns = [
+    ["金融机构干部", /金融机构干部/],
+    ["农商行中高层", /农商行.*(?:中高层|中层|高管|干部)/],
+    ["国企中层", /国企中层/],
+    ["国企高管", /国企高管|国有企业高管/],
+    ["党政干部", /党政干部/],
+    ["园区干部", /园区干部/],
+    ["企业管理者", /企业管理者|企业中高层/],
+    ["财务负责人", /财务负责人|财务管理人员/]
+  ];
+  for (const [label, re] of patterns) if (re.test(text)) return label;
+  return "";
+}
+
+function inferIndustry(text) {
+  if (/银行|农商行|金融机构|金融中心|跨境金融|金融监管/.test(text)) return "金融";
+  if (/国企|国有企业/.test(text)) return "国有企业";
+  if (/园区|招商引资|区域经济/.test(text)) return "区域经济/园区";
+  if (/党政|治理|公共政策/.test(text)) return "党政/公共治理";
+  if (/财务|会计|业财/.test(text)) return "财务管理";
+  return "";
+}
+
+function heuristicTheme(text) {
+  const cleaned = text
+    .replace(/请.*$/g, "")
+    .replace(/^(?:我要|我想|需要|帮我|请为)/, "")
+    .replace(/(?:培训对象|对象)[：:][^，。；;]+[，。；;]?/g, "")
+    .replace(/\d+\s*天/g, "")
+    .replace(/[一二两三四五六七八九十]\s*天/g, "")
+    .replace(/每天上午下午各(?:1|一)讲/g, "")
+    .replace(/上午和下午.*$/g, "")
+    .trim()
+    .replace(/^[，、；：:\s]+|[，、；：:\s]+$/g,"");
+  return cleaned.length >= 4 ? cleaned : "";
 }
 
 function heuristicRequirement(text) {
-  let audience = "";
-  if (/金融机构干部/.test(text)) audience = "金融机构干部";
-  else if (/农商行/.test(text)) audience = "农商行中高层";
-  else if (/国企中层/.test(text)) audience = "国企中层";
-  else if (/国企高管/.test(text)) audience = "国企高管";
-  else if (/党政干部/.test(text)) audience = "党政干部";
-  else if (/园区干部/.test(text)) audience = "园区干部";
-
-  let industry = "";
-  if (/银行|农商行|金融机构|金融中心|跨境金融/.test(text)) industry = "金融";
-  else if (/国企/.test(text)) industry = "国有企业";
-  else if (/园区|招商引资|区域经济/.test(text)) industry = "区域经济/园区";
-  else if (/党政|治理/.test(text)) industry = "党政/公共治理";
-
-  const days = parseDays(text);
-  const sessions = guessSessions(text, days);
-
+  const days = parseDaysFromText(text);
+  const sessions = parseExplicitSessions(text);
   return {
-    audience: audience || "未明确",
-    industry: industry || "未明确",
-    theme: text
-      .replace(/请.*$/g, "")
-      .replace(/，?\d+\s*天.*$/g, "")
-      .trim() || text,
-    days: `${days}天`,
-    sessions: `${sessions}讲`,
-    goals: "围绕用户主题形成结构完整、师资可核查的专题课程方案",
+    audience: inferAudience(text),
+    industry: inferIndustry(text),
+    theme: heuristicTheme(text),
+    days: days ? `${days}天` : "",
+    sessions: sessions ? `${sessions}讲` : "",
+    goals: "",
     assumptions: []
   };
 }
 
-async function parseRequirement(apiKey, userText) {
-  const prompt = `从下面培训需求中提取结构化信息，只输出 JSON：
+async function parseRequirement(apiKey, conversationText) {
+  const fallback = heuristicRequirement(conversationText);
+
+  const prompt = `请从完整对话中提取培训需求，只输出 JSON：
 
 {
   "audience": "",
@@ -127,42 +167,77 @@ async function parseRequirement(apiKey, userText) {
 }
 
 规则：
+- 只能从用户明确表达或可直接确定的信息中提取，不要猜。
 - days 使用“1天/2天/3天”格式。
 - sessions 使用“2讲/4讲/6讲”格式。
-- 如果用户明确说上午和下午各一讲，1天=2讲，2天=4讲，3天=6讲。
-- theme 提炼培训主题，不要把整句需求原样复制。
-- 信息不足才写“未明确”。
+- 若用户明确说每天上午下午各1讲，则 sessions = days × 2。
+- 信息缺失就留空字符串，不要为了完整而补造。
+- theme 应提炼培训主题。
 
-用户需求：
-${userText}`;
+完整用户对话：
+${conversationText}`;
 
   try {
     const raw = await callDeepSeek(apiKey, [
-      { role: "system", content: "你是培训需求解析器。严格输出 JSON，不要其他文字。" },
+      { role: "system", content: "你是培训需求解析器。宁缺勿假，只输出严格 JSON。" },
       { role: "user", content: prompt }
     ], 900);
-
     const parsed = extractJson(raw);
+
     if (parsed && typeof parsed === "object") {
-      const fallback = heuristicRequirement(userText);
       return {
-        audience: parsed.audience || fallback.audience,
-        industry: parsed.industry || fallback.industry,
-        theme: parsed.theme || fallback.theme,
-        days: parsed.days || fallback.days,
-        sessions: parsed.sessions || fallback.sessions,
-        goals: parsed.goals || fallback.goals,
+        audience: parsed.audience || fallback.audience || "",
+        industry: parsed.industry || fallback.industry || "",
+        theme: parsed.theme || fallback.theme || "",
+        days: parsed.days || fallback.days || "",
+        sessions: parsed.sessions || fallback.sessions || "",
+        goals: parsed.goals || "",
         assumptions: Array.isArray(parsed.assumptions) ? parsed.assumptions : []
       };
     }
   } catch {}
 
-  return heuristicRequirement(userText);
+  return fallback;
+}
+
+function missingCriticalFields(req) {
+  const missing = [];
+  if (!req.audience) missing.push("培训对象");
+  if (!req.theme) missing.push("培训主题");
+  if (!req.days) missing.push("培训天数");
+  return missing;
+}
+
+function clarificationMessage(missing, req) {
+  const labels = missing.join("、");
+  let example = "例如：对象为国企中层，2天，主题为人工智能与数字化转型。";
+  if (missing.length === 1 && missing[0] === "培训天数") example = "例如：2天。";
+  if (missing.length === 1 && missing[0] === "培训对象") example = "例如：金融机构中层干部。";
+  if (missing.length === 1 && missing[0] === "培训主题") example = "例如：上海国际金融中心建设与跨境金融。";
+
+  return `为了生成正式课表，还需要确认：${labels}。请一次性补充即可。${example}`;
+}
+
+function normalizeSessions(req) {
+  if (req.sessions) return req;
+
+  const dayMatch = String(req.days || "").match(/(\d+)/);
+  const days = dayMatch ? Math.max(1, Number(dayMatch[1])) : 1;
+
+  return {
+    ...req,
+    sessions: `${days * 2}讲`,
+    assumptions: [
+      ...(Array.isArray(req.assumptions) ? req.assumptions : []),
+      "未明确每日课次，按每天上午、下午各1讲生成"
+    ]
+  };
 }
 
 function buildFacultyContext(teachers, courses, relations) {
   const teacherMap = new Map(teachers.map(t => [t.business_code, t]));
   const courseMap = new Map(courses.map(c => [c.business_code, c]));
+
   const formal = [];
   const external = [];
 
@@ -227,23 +302,18 @@ function scoreCandidate(candidate, req, rawText) {
   const reasons = [];
 
   for (const term of terms) {
-    if (!term || term === "未明确") continue;
+    if (!term) continue;
     if (candidate.course_title.includes(term)) {
-      score += 8;
-      reasons.push(`课程名称匹配“${term}”`);
+      score += 8; reasons.push(`课程名称匹配“${term}”`);
     } else if (candidate.course_topics.includes(term)) {
-      score += 6;
-      reasons.push(`课程主题匹配“${term}”`);
+      score += 6; reasons.push(`课程主题匹配“${term}”`);
     } else if (candidate.research_topics.includes(term)) {
-      score += 5;
-      reasons.push(`研究方向匹配“${term}”`);
+      score += 5; reasons.push(`研究方向匹配“${term}”`);
     } else if (candidate.course_audiences.includes(term) || candidate.teacher_audiences.includes(term)) {
-      score += 3;
-      reasons.push(`适用对象匹配“${term}”`);
+      score += 3; reasons.push(`适用对象匹配“${term}”`);
     }
   }
 
-  // 对常见复合主题增强召回
   const boosts = [
     ["国际金融中心", ["国际金融", "金融中心"]],
     ["跨境金融", ["跨境金融", "人民币国际化"]],
@@ -256,8 +326,8 @@ function scoreCandidate(candidate, req, rawText) {
 
   for (const [needle, aliases] of boosts) {
     if (rawText.includes(needle)) {
-      for (const a of aliases) {
-        if (haystack.includes(a)) {
+      for (const alias of aliases) {
+        if (haystack.includes(alias)) {
           score += 7;
           reasons.push(`与“${needle}”方向高度匹配`);
           break;
@@ -266,13 +336,17 @@ function scoreCandidate(candidate, req, rawText) {
     }
   }
 
-  return { ...candidate, match_score: score, match_reasons: [...new Set(reasons)].slice(0, 4) };
+  return {
+    ...candidate,
+    match_score: score,
+    match_reasons: [...new Set(reasons)].slice(0, 4)
+  };
 }
 
 function rankCandidates(candidates, req, rawText) {
   return candidates
     .map(c => scoreCandidate(c, req, rawText))
-    .sort((a, b) => b.match_score - a.match_score);
+    .sort((a,b) => b.match_score - a.match_score);
 }
 
 function parseSessionCount(req) {
@@ -286,10 +360,10 @@ function makeSlots(req) {
   const count = parseSessionCount(req);
 
   const slots = [];
-  for (let i = 0; i < count; i++) {
-    const day = Math.min(days, Math.floor(i / 2) + 1);
+  for (let i=0; i<count; i++) {
+    const day = Math.min(days, Math.floor(i/2)+1);
     const period = i % 2 === 0 ? "上午" : "下午";
-    slots.push({ day: `第${day}天`, period });
+    slots.push({ day:`第${day}天`, period });
   }
   return slots;
 }
@@ -306,14 +380,13 @@ function deterministicFallback(req, rankedFormal, rankedExternal) {
     if (!candidate) {
       return {
         ...slot,
-        module: req.theme || "专题课程",
+        module: req.theme,
         course_title: "待匹配",
         teacher_name: "待匹配",
         institution: "",
         source_type: "",
         reason: "当前正式师资课程库暂未找到满足条件的确认关系。",
-        evidence: "",
-        pending: "补充或确认正式师资"
+        evidence: ""
       };
     }
 
@@ -321,39 +394,39 @@ function deterministicFallback(req, rankedFormal, rankedExternal) {
 
     return {
       ...slot,
-      module: candidate.course_topics?.split(/[；;]/)[0] || req.theme || "专题课程",
+      module: candidate.course_topics?.split(/[；;]/)[0] || req.theme,
       course_title: candidate.course_title,
       teacher_name: candidate.teacher_name,
-      institution: [candidate.institution, candidate.department].filter(Boolean).join(" "),
+      institution: [candidate.institution,candidate.department].filter(Boolean).join(" "),
       source_type: candidate.source_type,
       reason: candidate.match_reasons.length
-        ? candidate.match_reasons.join("；")
-        : "课程主题、适用对象与培训需求具有较高相关性。",
-      evidence: `正式师资课程关系已确认；课程编号 ${candidate.course_business_code}；教师编号 ${candidate.teacher_business_code}`,
-      pending: "确认教师档期及最终授课内容"
+        ? candidate.match_reasons.slice(0,2).join("；")
+        : "课程方向及适用对象与培训需求匹配。",
+      evidence: `已确认正式师资课程关系；课程编号 ${candidate.course_business_code}；教师编号 ${candidate.teacher_business_code}`
     };
   });
 
   const external_candidates = rankedExternal
     .filter(x => x.match_score > 0)
-    .slice(0, 3)
+    .slice(0,3)
     .map(x => ({
       teacher_name: x.teacher_name,
       institution: x.institution,
       source_type: x.source_type,
       suggested_topic: x.course_title,
-      reason: x.match_reasons.join("；") || "与培训主题存在匹配点。",
+      reason: x.match_reasons.slice(0,2).join("；") || "与培训主题存在匹配点。",
       notice: "未入正式库，需核验"
     }));
 
   return {
     mode: "plan",
-    assistant_message: "已根据培训需求和正式师资课程库生成结构化方案。",
+    assistant_message: req.assumptions?.length
+      ? `方案已生成。${req.assumptions.join("；")}。`
+      : "已根据正式师资课程库生成结构化方案。",
     requirement_summary: req,
     formal_schedule,
     external_candidates,
-    pending_items: ["正式推荐仍需确认教师档期与最终授课内容。"],
-    suggested_actions: ["调整课程顺序", "更换指定时段老师", "更换指定课程", "导出课表"]
+    suggested_actions: ["调整课程顺序","更换指定时段老师","更换指定课程","导出成果"]
   };
 }
 
@@ -363,62 +436,60 @@ async function generatePlan(apiKey, req, rankedFormal, rankedExternal) {
   const prompt = `请根据下面信息生成结构化培训方案，只输出 JSON。
 
 需求：
-${JSON.stringify(req, null, 2)}
+${JSON.stringify(req,null,2)}
 
-需要的时段：
-${JSON.stringify(slots, null, 2)}
+需要时段：
+${JSON.stringify(slots,null,2)}
 
-正式候选（已经过服务端资格过滤与相关性排序）：
-${JSON.stringify(rankedFormal.slice(0, 12), null, 2)}
+正式候选（服务端已资格过滤并按相关性排序）：
+${JSON.stringify(rankedFormal.slice(0,12),null,2)}
 
-外部候选补充：
-${JSON.stringify(rankedExternal.filter(x => x.match_score > 0).slice(0, 6), null, 2)}
+外部候选：
+${JSON.stringify(rankedExternal.filter(x=>x.match_score>0).slice(0,6),null,2)}
 
 输出结构：
 {
-  "mode": "plan",
-  "assistant_message": "",
-  "requirement_summary": ${JSON.stringify(req)},
-  "formal_schedule": [
+  "mode":"plan",
+  "assistant_message":"",
+  "requirement_summary":${JSON.stringify(req)},
+  "formal_schedule":[
     {
-      "day": "",
-      "period": "",
-      "module": "",
-      "course_title": "",
-      "teacher_name": "",
-      "institution": "",
-      "source_type": "库内师资",
-      "reason": "",
-      "evidence": "",
-      "pending": ""
+      "day":"",
+      "period":"",
+      "module":"",
+      "course_title":"",
+      "teacher_name":"",
+      "institution":"",
+      "source_type":"库内师资",
+      "reason":"",
+      "evidence":""
     }
   ],
-  "external_candidates": [
+  "external_candidates":[
     {
-      "teacher_name": "",
-      "institution": "",
-      "source_type": "",
-      "suggested_topic": "",
-      "reason": "",
-      "notice": "未入正式库，需核验"
+      "teacher_name":"",
+      "institution":"",
+      "source_type":"",
+      "suggested_topic":"",
+      "reason":"",
+      "notice":"未入正式库，需核验"
     }
   ],
-  "pending_items": [],
-  "suggested_actions": []
+  "suggested_actions":[]
 }
 
 要求：
-- formal_schedule 数量尽量与需要时段数一致。
-- 只能从正式候选中选择正式师资和课程。
-- 优先选择 match_score 高的候选。
-- 同一天上午下午尽量不要重复同一门课程。
-- 如果候选不足，保留“待匹配”。
-- requirement_summary 必须直接使用上面的需求值，不要重新置空。`;
+- 不要输出“待确认事项”字段或板块。
+- formal_schedule 数量尽量与时段数一致。
+- 正式课表只能从正式候选选择。
+- 推荐理由控制在1-2句，详细事实放 evidence。
+- 如果正式候选不足，对应时段使用“待匹配”。
+- requirement_summary 必须直接使用上面的需求值，不要置空。`;
 
-  const raw = await callDeepSeek(apiKey, [
-    { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: prompt }
-  ], 2600);
+  const raw = await callDeepSeek(apiKey,[
+    {role:"system",content:SYSTEM_PROMPT},
+    {role:"user",content:prompt}
+  ],2600);
 
   return extractJson(raw);
 }
@@ -426,27 +497,22 @@ ${JSON.stringify(rankedExternal.filter(x => x.match_score > 0).slice(0, 6), null
 function normalizePlan(modelPlan, fallbackPlan, req) {
   if (!modelPlan || typeof modelPlan !== "object") return fallbackPlan;
 
-  const formal = Array.isArray(modelPlan.formal_schedule) && modelPlan.formal_schedule.length
-    ? modelPlan.formal_schedule
-    : fallbackPlan.formal_schedule;
-
   return {
     mode: "plan",
     assistant_message: modelPlan.assistant_message || fallbackPlan.assistant_message,
-    requirement_summary: {
-      ...req,
-      ...(modelPlan.requirement_summary || {})
-    },
-    formal_schedule: formal,
-    external_candidates: Array.isArray(modelPlan.external_candidates)
-      ? modelPlan.external_candidates
-      : fallbackPlan.external_candidates,
-    pending_items: Array.isArray(modelPlan.pending_items)
-      ? modelPlan.pending_items
-      : fallbackPlan.pending_items,
-    suggested_actions: Array.isArray(modelPlan.suggested_actions)
-      ? modelPlan.suggested_actions
-      : fallbackPlan.suggested_actions
+    requirement_summary: {...req,...(modelPlan.requirement_summary || {})},
+    formal_schedule:
+      Array.isArray(modelPlan.formal_schedule) && modelPlan.formal_schedule.length
+        ? modelPlan.formal_schedule
+        : fallbackPlan.formal_schedule,
+    external_candidates:
+      Array.isArray(modelPlan.external_candidates)
+        ? modelPlan.external_candidates
+        : fallbackPlan.external_candidates,
+    suggested_actions:
+      Array.isArray(modelPlan.suggested_actions)
+        ? modelPlan.suggested_actions
+        : fallbackPlan.suggested_actions
   };
 }
 
@@ -456,103 +522,110 @@ export async function onRequestPost(context) {
     const cloudbaseEnvId = context.env.CLOUDBASE_ENV_ID;
     const cloudbaseApiKey = context.env.CLOUDBASE_API_KEY;
 
-    if (!deepseekKey) return json({ error: "服务器未配置 DEEPSEEK_API_KEY" }, 500);
-    if (!cloudbaseEnvId) return json({ error: "服务器未配置 CLOUDBASE_ENV_ID" }, 500);
-    if (!cloudbaseApiKey) return json({ error: "服务器未配置 CLOUDBASE_API_KEY" }, 500);
+    if (!deepseekKey) return json({error:"服务器未配置 DEEPSEEK_API_KEY"},500);
+    if (!cloudbaseEnvId) return json({error:"服务器未配置 CLOUDBASE_ENV_ID"},500);
+    if (!cloudbaseApiKey) return json({error:"服务器未配置 CLOUDBASE_API_KEY"},500);
 
     const body = await context.request.json();
     const incoming = Array.isArray(body.messages) ? body.messages : [];
     const messages = incoming
-      .filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
-      .slice(-12);
+      .filter(m => m && (m.role==="user" || m.role==="assistant") && typeof m.content==="string")
+      .slice(-16);
 
-    const latestUser = [...messages].reverse().find(m => m.role === "user");
-    if (!latestUser) return json({ error: "缺少用户需求" }, 400);
+    const userMessages = messages.filter(m=>m.role==="user").map(m=>m.content);
+    if (!userMessages.length) return json({error:"缺少用户需求"},400);
 
-    const userText = latestUser.content;
-    const req = await parseRequirement(deepseekKey, userText);
+    const conversationText = userMessages.join("\n补充信息：");
+    let req = await parseRequirement(deepseekKey, conversationText);
 
-    const [teachers, courses, relations] = await Promise.all([
+    const missing = missingCriticalFields(req);
+    if (missing.length) {
+      const question = clarificationMessage(missing,req);
+      return json({
+        mode:"clarify",
+        assistant_message:question,
+        requirement_summary:req,
+        questions:missing,
+        formal_schedule:[],
+        external_candidates:[],
+        suggested_actions:[]
+      });
+    }
+
+    req = normalizeSessions(req);
+
+    const [teachers,courses,relations] = await Promise.all([
       cloudbaseGet(
-        cloudbaseEnvId,
-        cloudbaseApiKey,
-        "teachers",
+        cloudbaseEnvId,cloudbaseApiKey,"teachers",
         "select=business_code,name,institution,department,research_topics,audiences,source_type,status&is_test_data=eq.true"
       ),
       cloudbaseGet(
-        cloudbaseEnvId,
-        cloudbaseApiKey,
-        "courses",
+        cloudbaseEnvId,cloudbaseApiKey,"courses",
         "select=business_code,title,topics,audiences,duration,status&is_test_data=eq.true"
       ),
       cloudbaseGet(
-        cloudbaseEnvId,
-        cloudbaseApiKey,
-        "teacher_courses",
+        cloudbaseEnvId,cloudbaseApiKey,"teacher_courses",
         "select=relation_code,teacher_business_code,course_business_code,confirmed_status,evidence_note&is_test_data=eq.true"
       )
     ]);
 
-    const faculty = buildFacultyContext(teachers, courses, relations);
-    const rankedFormal = rankCandidates(faculty.formal, req, userText);
-    const rankedExternal = rankCandidates(faculty.external, req, userText);
+    const faculty = buildFacultyContext(teachers,courses,relations);
+    const rankedFormal = rankCandidates(faculty.formal,req,conversationText);
+    const rankedExternal = rankCandidates(faculty.external,req,conversationText);
 
-    const fallbackPlan = deterministicFallback(req, rankedFormal, rankedExternal);
+    const fallbackPlan = deterministicFallback(req,rankedFormal,rankedExternal);
 
     let modelPlan = null;
     try {
-      modelPlan = await generatePlan(deepseekKey, req, rankedFormal, rankedExternal);
+      modelPlan = await generatePlan(deepseekKey,req,rankedFormal,rankedExternal);
     } catch {}
 
-    const plan = normalizePlan(modelPlan, fallbackPlan, req);
+    const plan = normalizePlan(modelPlan,fallbackPlan,req);
 
     return json({
       ...plan,
-      meta: {
-        formal_candidates: faculty.formal.length,
-        external_candidates: faculty.external.length,
-        top_formal_matches: rankedFormal.slice(0, 5).map(x => ({
-          teacher: x.teacher_name,
-          course: x.course_title,
-          score: x.match_score
+      meta:{
+        formal_candidates:faculty.formal.length,
+        external_candidates:faculty.external.length,
+        top_formal_matches:rankedFormal.slice(0,5).map(x=>({
+          teacher:x.teacher_name,course:x.course_title,score:x.match_score
         })),
-        data_source: "CloudBase PostgreSQL",
-        pipeline: "parse -> deterministic match -> LLM compose -> fallback"
+        data_source:"CloudBase PostgreSQL",
+        pipeline:"clarify -> parse -> deterministic match -> LLM compose -> fallback"
       }
     });
 
   } catch (error) {
-    return json({ error: error?.message || "服务器内部错误" }, 500);
+    return json({error:error?.message || "服务器内部错误"},500);
   }
 }
 
 export async function onRequestGet(context) {
-  const cloudbaseEnvId = context.env.CLOUDBASE_ENV_ID;
-  const cloudbaseApiKey = context.env.CLOUDBASE_API_KEY;
+  const cloudbaseEnvId=context.env.CLOUDBASE_ENV_ID;
+  const cloudbaseApiKey=context.env.CLOUDBASE_API_KEY;
 
-  const result = {
-    ok: true,
-    service: "AI Workbench Chat API",
-    version: "1.1.1",
-    structured_output: true,
-    deterministic_matching: true,
-    deepseek_configured: Boolean(context.env.DEEPSEEK_API_KEY),
-    cloudbase_configured: Boolean(cloudbaseEnvId && cloudbaseApiKey)
+  const result={
+    ok:true,
+    service:"AI Workbench Chat API",
+    version:"1.1.2",
+    clarification_before_plan:true,
+    structured_output:true,
+    deterministic_matching:true,
+    deepseek_configured:Boolean(context.env.DEEPSEEK_API_KEY),
+    cloudbase_configured:Boolean(cloudbaseEnvId && cloudbaseApiKey)
   };
 
   if (cloudbaseEnvId && cloudbaseApiKey) {
     try {
-      const teachers = await cloudbaseGet(
-        cloudbaseEnvId,
-        cloudbaseApiKey,
-        "teachers",
+      const teachers=await cloudbaseGet(
+        cloudbaseEnvId,cloudbaseApiKey,"teachers",
         "select=business_code&is_test_data=eq.true"
       );
-      result.database_ok = true;
-      result.test_teacher_count = Array.isArray(teachers) ? teachers.length : 0;
-    } catch (e) {
-      result.database_ok = false;
-      result.database_error = e.message;
+      result.database_ok=true;
+      result.test_teacher_count=Array.isArray(teachers)?teachers.length:0;
+    } catch(e) {
+      result.database_ok=false;
+      result.database_error=e.message;
     }
   }
 
