@@ -76,6 +76,90 @@ async function callDeepSeek(apiKey, messages, maxTokens = 1800) {
   return data?.choices?.[0]?.message?.content || "";
 }
 
+
+async function researchCustomer(tavilyKey, deepseekKey, customerName) {
+  if (!tavilyKey) {
+    return {
+      research_available: false,
+      customer_name: customerName,
+      message: "客户公开资料调研尚未启用：请在 EdgeOne 环境变量中配置 TAVILY_API_KEY。",
+      sources: [],
+      background: "",
+      training_relevance: ""
+    };
+  }
+
+  const query = `${customerName} 官方 官网 战略 重点工作 数字化 人才 培训 2026`;
+  const res = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      api_key: tavilyKey,
+      query,
+      search_depth: "advanced",
+      max_results: 8,
+      include_answer: false,
+      include_raw_content: false
+    })
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.detail || data?.message || `客户调研服务返回 ${res.status}`);
+  }
+
+  const sources = (Array.isArray(data?.results) ? data.results : [])
+    .filter(x => x?.url && x?.title)
+    .slice(0, 8)
+    .map(x => ({
+      title: x.title,
+      url: x.url,
+      content: String(x.content || "").slice(0, 1200),
+      score: x.score ?? null
+    }));
+
+  if (!sources.length) {
+    return {
+      research_available: true,
+      customer_name: customerName,
+      researched_at: new Date().toISOString(),
+      sources: [],
+      background: "",
+      training_relevance: "",
+      message: "未检索到可用于形成客户背景的公开资料。"
+    };
+  }
+
+  let background = "";
+  let training_relevance = "";
+  try {
+    const raw = await callDeepSeek(deepseekKey, [
+      {
+        role: "system",
+        content: `你是企业/机构培训项目前期调研助手。只能依据用户提供的公开检索结果总结，不得使用记忆补充事实，不得编造内部情况。只输出严格JSON。`
+      },
+      {
+        role: "user",
+        content: `客户名称：${customerName}\n\n公开检索结果：\n${JSON.stringify(sources, null, 2)}\n\n请只依据以上资料输出：\n{\n  "background":"1-2段客户背景，聚焦机构性质、主营/职责、公开战略重点、近期重点工作；无依据内容省略",\n  "training_relevance":"1段与培训主题设计可能相关的公开背景线索。只写资料支持的线索，不要把推测写成客户真实需求"\n}`
+      }
+    ], 1600);
+    const parsed = extractJson(raw);
+    background = parsed?.background || "";
+    training_relevance = parsed?.training_relevance || "";
+  } catch {}
+
+  return {
+    research_available: true,
+    customer_name: customerName,
+    researched_at: new Date().toISOString(),
+    query,
+    sources,
+    background,
+    training_relevance,
+    message: "客户公开资料调研已完成。"
+  };
+}
+
 function cnNum(n) {
   const map = { "一":1,"二":2,"两":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9,"十":10 };
   return map[n] || null;
@@ -234,6 +318,44 @@ function normalizeSessions(req) {
   };
 }
 
+
+function buildSafeTeacherProfile(t) {
+  if (typeof t?.profile === "string" && t.profile.trim()) {
+    return t.profile.trim();
+  }
+
+  const parts = [];
+  const org = [t?.institution, t?.department].filter(Boolean).join(" ");
+  if (org) parts.push(`${t.name}，${org}`);
+  else if (t?.name) parts.push(t.name);
+
+  if (t?.research_topics) {
+    const topics = String(t.research_topics)
+      .split(/[；;、,，]+/)
+      .map(x => x.trim())
+      .filter(Boolean)
+      .join("、");
+    if (topics) parts.push(`主要研究领域包括${topics}`);
+  }
+
+  if (!parts.length) return "";
+  return parts.join("。") + "。";
+}
+
+async function loadTeachers(envId, apiKey) {
+  const extended = "select=business_code,name,institution,department,research_topics,audiences,source_type,status,profile,profile_source_type,profile_status,profile_evidence&is_test_data=eq.true";
+  try {
+    return await cloudbaseGet(envId, apiKey, "teachers", extended);
+  } catch {
+    return await cloudbaseGet(
+      envId,
+      apiKey,
+      "teachers",
+      "select=business_code,name,institution,department,research_topics,audiences,source_type,status&is_test_data=eq.true"
+    );
+  }
+}
+
 function buildFacultyContext(teachers, courses, relations) {
   const teacherMap = new Map(teachers.map(t => [t.business_code, t]));
   const courseMap = new Map(courses.map(c => [c.business_code, c]));
@@ -263,7 +385,10 @@ function buildFacultyContext(teachers, courses, relations) {
       course_topics: c.topics || "",
       course_audiences: c.audiences || "",
       duration: c.duration || "",
-      evidence_note: r.evidence_note || ""
+      evidence_note: r.evidence_note || "",
+      teacher_profile: buildSafeTeacherProfile(t),
+      profile_source_type: t.profile_source_type || (t.profile ? "library" : "library_fields"),
+      profile_status: t.profile_status || (t.profile ? "verified" : "derived")
     };
 
     if (t.source_type === "库内师资") formal.push(item);
@@ -385,6 +510,7 @@ function deterministicFallback(req, rankedFormal, rankedExternal) {
         teacher_name: "待匹配",
         institution: "",
         source_type: "",
+        teacher_profile: "",
         reason: "当前正式师资课程库暂未找到满足条件的确认关系。",
         evidence: ""
       };
@@ -399,6 +525,7 @@ function deterministicFallback(req, rankedFormal, rankedExternal) {
       teacher_name: candidate.teacher_name,
       institution: [candidate.institution,candidate.department].filter(Boolean).join(" "),
       source_type: candidate.source_type,
+      teacher_profile: candidate.teacher_profile || "",
       reason: candidate.match_reasons.length
         ? candidate.match_reasons.slice(0,2).join("；")
         : "课程方向及适用对象与培训需求匹配。",
@@ -461,6 +588,7 @@ ${JSON.stringify(rankedExternal.filter(x=>x.match_score>0).slice(0,6),null,2)}
       "teacher_name":"",
       "institution":"",
       "source_type":"库内师资",
+      "teacher_profile":"",
       "reason":"",
       "evidence":""
     }
@@ -482,6 +610,7 @@ ${JSON.stringify(rankedExternal.filter(x=>x.match_score>0).slice(0,6),null,2)}
 - 不要输出“待确认事项”字段或板块。
 - formal_schedule 数量尽量与时段数一致。
 - 正式课表只能从正式候选选择。
+- teacher_profile 只能复制正式候选中的 teacher_profile，不得补写任何候选中没有的学历、职务、兼职、成果或荣誉。
 - 推荐理由控制在1-2句，详细事实放 evidence。
 - 如果正式候选不足，对应时段使用“待匹配”。
 - requirement_summary 必须直接使用上面的需求值，不要置空。`;
@@ -516,6 +645,25 @@ function normalizePlan(modelPlan, fallbackPlan, req) {
   };
 }
 
+
+function enrichScheduleProfiles(plan, rankedFormal) {
+  const rows = Array.isArray(plan?.formal_schedule) ? plan.formal_schedule : [];
+  plan.formal_schedule = rows.map(row => {
+    const match = rankedFormal.find(x =>
+      (row.course_title && x.course_title === row.course_title) ||
+      (row.teacher_name && x.teacher_name === row.teacher_name)
+    );
+    if (!match) return { ...row, teacher_profile: row.teacher_profile || "" };
+    return {
+      ...row,
+      teacher_profile: match.teacher_profile || row.teacher_profile || "",
+      institution: row.institution || [match.institution, match.department].filter(Boolean).join(" "),
+      source_type: row.source_type || match.source_type
+    };
+  });
+  return plan;
+}
+
 export async function onRequestPost(context) {
   try {
     const deepseekKey = context.env.DEEPSEEK_API_KEY;
@@ -527,6 +675,29 @@ export async function onRequestPost(context) {
     if (!cloudbaseApiKey) return json({error:"服务器未配置 CLOUDBASE_API_KEY"},500);
 
     const body = await context.request.json();
+
+    if (body?.action === "research_customer") {
+      const customerName = String(body.customer_name || "").trim();
+      if (!customerName) return json({ error: "customer_name 不能为空" }, 400);
+      try {
+        const research = await researchCustomer(
+          context.env.TAVILY_API_KEY,
+          deepseekKey,
+          customerName
+        );
+        return json(research);
+      } catch (e) {
+        return json({
+          research_available: Boolean(context.env.TAVILY_API_KEY),
+          customer_name: customerName,
+          background: "",
+          training_relevance: "",
+          sources: [],
+          error: e?.message || "客户调研失败"
+        }, 502);
+      }
+    }
+
     const incoming = Array.isArray(body.messages) ? body.messages : [];
     const messages = incoming
       .filter(m => m && (m.role==="user" || m.role==="assistant") && typeof m.content==="string")
@@ -555,10 +726,7 @@ export async function onRequestPost(context) {
     req = normalizeSessions(req);
 
     const [teachers,courses,relations] = await Promise.all([
-      cloudbaseGet(
-        cloudbaseEnvId,cloudbaseApiKey,"teachers",
-        "select=business_code,name,institution,department,research_topics,audiences,source_type,status&is_test_data=eq.true"
-      ),
+      loadTeachers(cloudbaseEnvId, cloudbaseApiKey),
       cloudbaseGet(
         cloudbaseEnvId,cloudbaseApiKey,"courses",
         "select=business_code,title,topics,audiences,duration,status&is_test_data=eq.true"
@@ -580,7 +748,7 @@ export async function onRequestPost(context) {
       modelPlan = await generatePlan(deepseekKey,req,rankedFormal,rankedExternal);
     } catch {}
 
-    const plan = normalizePlan(modelPlan,fallbackPlan,req);
+    const plan = enrichScheduleProfiles(normalizePlan(modelPlan,fallbackPlan,req), rankedFormal);
 
     return json({
       ...plan,
@@ -607,8 +775,9 @@ export async function onRequestGet(context) {
   const result={
     ok:true,
     service:"AI Workbench Chat API",
-    version:"1.1.2",
+    version:"1.1.3",
     clarification_before_plan:true,
+    customer_research_configured:Boolean(context.env.TAVILY_API_KEY),
     structured_output:true,
     deterministic_matching:true,
     deepseek_configured:Boolean(context.env.DEEPSEEK_API_KEY),
