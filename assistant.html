@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI教研助手</title>
+<style>
+:root{--bg:#07111f;--panel:rgba(16,33,56,.78);--line:rgba(103,185,255,.28);--text:#f4f8ff;--muted:#95a8c2;--cyan:#6de2ff;--blue:#5c8dff;--violet:#8f7cff}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;background:#07111f;color:var(--text)}
+body{background:radial-gradient(circle at 75% 8%,rgba(50,116,215,.25),transparent 30%),linear-gradient(145deg,#07101c,#09182a 60%,#08111f)}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.32;background-image:radial-gradient(circle,#d9f1ff 0 1px,transparent 1.2px);background-size:90px 90px}
+.shell{max-width:1280px;margin:auto;min-height:100vh;padding:28px}
+.top{display:flex;align-items:center;justify-content:space-between}.back{color:#cfe5ff;text-decoration:none;padding:10px 14px;border:1px solid rgba(130,190,255,.2);border-radius:12px;background:rgba(11,24,41,.45)}
+.logo{font-size:18px;color:#cce5ff}.hero{margin:54px 0 28px}.hero h1{font-size:54px;margin:0;background:linear-gradient(180deg,#fff,#8fd5ff 72%,#817fff);-webkit-background-clip:text;color:transparent}.hero p{font-size:20px;color:#aabbd1;margin-top:10px}
+.layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,.7fr);gap:20px}
+.panel{background:linear-gradient(180deg,rgba(18,39,67,.78),rgba(10,24,43,.82));border:1px solid var(--line);border-radius:22px;backdrop-filter:blur(16px);box-shadow:0 22px 60px rgba(0,0,0,.22)}
+.chat{min-height:610px;display:flex;flex-direction:column;overflow:hidden}.chat-head{padding:18px 20px;border-bottom:1px solid rgba(130,187,255,.12);display:flex;align-items:center;justify-content:space-between}.status{font-size:13px;color:#9ae9ff}.status:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#50e7b4;box-shadow:0 0 10px #50e7b4;margin-right:8px}
+.messages{padding:22px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:18px;max-height:520px}.msg{max-width:86%;padding:15px 17px;border-radius:16px;line-height:1.75;white-space:pre-wrap}.ai{align-self:flex-start;background:rgba(41,69,103,.55);border:1px solid rgba(112,181,255,.18)}.user{align-self:flex-end;background:linear-gradient(135deg,rgba(55,142,255,.42),rgba(108,95,238,.38));border:1px solid rgba(119,182,255,.25)}.thinking{opacity:.75}
+.composer{padding:18px;border-top:1px solid rgba(130,187,255,.12)}.box{display:flex;gap:12px;border:1px solid rgba(105,190,255,.35);border-radius:18px;padding:12px;background:rgba(4,15,29,.5);box-shadow:0 0 24px rgba(61,135,255,.08)}textarea{flex:1;min-height:84px;max-height:180px;resize:vertical;background:transparent;border:none;outline:none;color:#fff;font-size:16px;line-height:1.6}.send{align-self:flex-end;border:none;border-radius:14px;padding:13px 18px;background:linear-gradient(90deg,#6de7ff,#70bfff 55%,#9b82ff);color:#071525;font-weight:800;cursor:pointer}.send:disabled{opacity:.45;cursor:not-allowed}
+.side{padding:20px}.side h3{margin:0 0 14px}.quick{display:grid;gap:11px}.q{padding:14px;border-radius:14px;border:1px solid rgba(123,181,255,.14);background:rgba(28,49,76,.54);cursor:pointer;transition:.2s}.q:hover{transform:translateY(-2px);border-color:rgba(109,220,255,.45)}.q b{display:block;margin-bottom:4px}.q span{font-size:13px;color:#90a3bd}.tip{margin-top:20px;padding:16px;border-radius:14px;background:rgba(15,30,51,.55);color:#9eb1ca;font-size:13px;line-height:1.75}.error{color:#ffb7c4}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.hero h1{font-size:42px}.shell{padding:18px}.side{order:-1}.chat{min-height:600px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top"><a class="back" href="./index.html">← 返回工作台</a><div class="logo">My AI · 教研</div></div>
+  <div class="hero"><h1>AI教研助手</h1><p>课程设计｜专题研究｜教研支持</p></div>
+  <div class="layout">
+    <section class="panel chat">
+      <div class="chat-head"><strong>教研对话</strong><span class="status">DeepSeek 已接入</span></div>
+      <div class="messages" id="messages">
+        <div class="msg ai">你好，我是 AI教研助手。
+
+你可以直接告诉我培训对象、主题、天数、课程方向或现有材料，我会优先从干部教育、专题培训和课程产品化的角度给出结构化建议。</div>
+      </div>
+      <div class="composer">
+        <div class="box">
+          <textarea id="input" placeholder="例如：请为“人工智能赋能干部教育”设计一天专题培训课程框架"></textarea>
+          <button class="send" id="send" onclick="sendMessage()">发送 →</button>
+        </div>
+      </div>
+    </section>
+    <aside class="panel side">
+      <h3>快捷任务</h3>
+      <div class="quick">
+        <div class="q" onclick="fill('请根据我接下来提供的培训需求，设计一个结构完整、适合对外使用的专题班课程框架。')"><b>课程框架</b><span>搭建专题班结构</span></div>
+        <div class="q" onclick="fill('请为我接下来提供的培训主题设计10个庄重、简洁、适合干部教育场景的班次名称，并说明推荐理由。')"><b>班次命名</b><span>生成高质量名称</span></div>
+        <div class="q" onclick="fill('请把我接下来提供的课程或项目内容优化为适合正式对外发布的宣传文案。')"><b>宣传文案</b><span>提炼对外表达</span></div>
+        <div class="q" onclick="fill('请诊断我接下来提供的课程安排，指出逻辑、结构、内容重复和落地性问题，并给出优化版本。')"><b>课程优化</b><span>诊断结构和内容</span></div>
+      </div>
+      <div class="tip">当前 V1.0 重点是把真实 AI 调用跑通。暂不做登录、数据库、知识库和文件上传，后续可以逐步加入。</div>
+    </aside>
+  </div>
+</div>
+<script>
+const messagesEl=document.getElementById('messages');
+const input=document.getElementById('input');
+const sendBtn=document.getElementById('send');
+let history=[];
+function fill(text){input.value=text;input.focus()}
+function addMessage(text,role,extra=''){const el=document.createElement('div');el.className=`msg ${role} ${extra}`;el.textContent=text;messagesEl.appendChild(el);messagesEl.scrollTop=messagesEl.scrollHeight;return el}
+async function sendMessage(){
+  const content=input.value.trim(); if(!content||sendBtn.disabled)return;
+  addMessage(content,'user'); history.push({role:'user',content}); input.value=''; sendBtn.disabled=true;
+  const loading=addMessage('正在思考…','ai','thinking');
+  try{
+    const res=await fetch('./api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history.slice(-12)})});
+    const data=await res.json();
+    loading.remove();
+    if(!res.ok) throw new Error(data.error||'请求失败');
+    addMessage(data.content,'ai'); history.push({role:'assistant',content:data.content});
+  }catch(err){
+    loading.remove(); addMessage('调用失败：'+err.message+'\n\n请检查 EdgeOne 环境变量 DEEPSEEK_API_KEY 是否已经配置，并重新部署。','ai','error');
+  }finally{sendBtn.disabled=false;input.focus()}
+}
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}});
+</script>
+</body>
+</html>

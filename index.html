@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI工作台</title>
+<meta name="description" content="个人 AI 工作台">
+<style>
+:root{
+  --bg:#07111f;--panel:rgba(18,35,58,.72);--text:#f5f8ff;--muted:#9fb0c8;
+  --cyan:#65d8ff;--blue:#4887ff;--violet:#8f79ff;
+}
+*{box-sizing:border-box} html,body{margin:0;min-height:100%;font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;background:#07111f;color:var(--text)}
+body{overflow-x:hidden}
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:
+radial-gradient(circle at 72% 15%,rgba(48,101,195,.27),transparent 28%),
+radial-gradient(circle at 55% 90%,rgba(55,141,255,.16),transparent 35%),
+linear-gradient(145deg,#08111d 0%,#07101c 42%,#081628 100%)}
+.bg:before{content:"";position:absolute;inset:-10%;opacity:.5;background-image:
+radial-gradient(circle at 15% 20%,#fff 0 1px,transparent 1.4px),
+radial-gradient(circle at 42% 14%,#8dcfff 0 1px,transparent 1.5px),
+radial-gradient(circle at 72% 30%,#d1ecff 0 1px,transparent 1.5px),
+radial-gradient(circle at 85% 18%,#6ad2ff 0 1px,transparent 1.5px);
+background-size:240px 240px,300px 300px,360px 360px,440px 440px;animation:drift 24s linear infinite}
+.orb{position:absolute;right:-110px;top:80px;width:420px;height:420px;border-radius:50%;
+background:radial-gradient(circle at 35% 35%,rgba(96,167,255,.28),rgba(20,63,120,.35) 38%,rgba(0,12,28,.95) 72%);
+box-shadow:0 0 80px rgba(62,139,255,.15),inset -35px -25px 90px rgba(0,0,0,.7);border:1px solid rgba(119,183,255,.15)}
+.horizon{position:absolute;left:220px;right:0;bottom:-20px;height:250px;background:
+radial-gradient(ellipse at 62% 80%,rgba(95,184,255,.28),transparent 21%),linear-gradient(to top,rgba(5,13,24,.95),rgba(5,13,24,0))}
+@keyframes drift{to{transform:translate3d(-60px,30px,0)}} @keyframes float{50%{transform:translateY(-8px)}} @keyframes pulse{50%{box-shadow:0 0 34px rgba(74,178,255,.55),inset 0 0 35px rgba(78,126,255,.08)}} @keyframes rotate{to{transform:rotate(360deg)}}
+
+.app{position:relative;z-index:2;display:grid;grid-template-columns:235px 1fr;min-height:100vh}
+.sidebar{border-right:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg,rgba(4,12,22,.82),rgba(5,12,23,.58));backdrop-filter:blur(20px);padding:30px 18px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{display:flex;gap:14px;align-items:center;padding:0 14px 34px}.logo{width:46px;height:46px;position:relative}.logo:before,.logo:after{content:"";position:absolute;border-radius:20px;background:linear-gradient(180deg,#78ddff,#4a7cff 68%,#7f6eff);box-shadow:0 0 24px rgba(77,160,255,.35)}.logo:before{width:12px;height:42px;left:8px;top:1px;transform:skew(-22deg)}.logo:after{width:12px;height:34px;left:25px;top:9px;transform:skew(28deg)}
+.brand h3{margin:0;font-size:18px}.brand small{display:block;color:#7f91aa;margin-top:4px}.nav{display:flex;flex-direction:column;gap:12px}
+.nav-item{border-radius:14px;padding:16px 18px;color:#d6e0ef;display:flex;align-items:center;gap:13px;border:1px solid transparent;cursor:pointer;transition:.25s}
+.nav-item:hover{background:rgba(79,135,255,.08)}.nav-item.active{background:linear-gradient(90deg,rgba(44,130,255,.2),rgba(44,130,255,.08));border-color:rgba(91,161,255,.28);box-shadow:inset 3px 0 0 #64d8ff}
+.ico{width:20px;text-align:center;font-size:18px}.sidebar-footer{margin-top:auto;color:#7890ac;font-size:12px;line-height:1.8;padding:0 14px}
+.main{padding:28px 34px 30px;min-width:0}.topbar{display:flex;justify-content:center;align-items:center;position:relative;margin-bottom:32px}
+.search{width:min(470px,55vw);height:44px;border-radius:24px;border:1px solid rgba(136,178,236,.22);background:rgba(10,22,38,.5);display:flex;align-items:center;gap:11px;padding:0 16px;color:#8fa3be;backdrop-filter:blur(16px)}
+.top-actions{position:absolute;right:0;display:flex;align-items:center;gap:18px;color:#c9d5e7}.avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(145deg,#6ba8ff,#253856 55%,#94b5c9);border:1px solid rgba(255,255,255,.18)}
+.hero{display:flex;align-items:flex-end;justify-content:space-between;margin:0 12px 42px}.title h1{font-size:64px;line-height:1;margin:0;font-weight:800;letter-spacing:-2px;background:linear-gradient(180deg,#fff 20%,#d9e9ff 46%,#76baff 70%,#5ee5ff 94%);-webkit-background-clip:text;color:transparent}.title p{margin:14px 0 0;color:#b8c4d6;font-size:22px}.quote{margin-right:130px;color:#d5e5ff;font-size:18px;font-style:italic;transform:rotate(-5deg);opacity:.8}
+.cards{display:grid;grid-template-columns:1.18fr 1fr 1fr 1fr;gap:16px;padding:0 8px}.card{min-height:410px;border-radius:18px;background:linear-gradient(180deg,rgba(28,49,76,.67),rgba(16,31,53,.75));border:1px solid rgba(123,174,241,.18);backdrop-filter:blur(16px);position:relative;overflow:hidden;transition:.28s ease;cursor:pointer}.card:hover{transform:translateY(-6px);border-color:rgba(105,197,255,.5);box-shadow:0 18px 44px rgba(0,0,0,.26)}.card.primary{border:2px solid rgba(104,198,255,.95);box-shadow:0 0 24px rgba(84,182,255,.35);animation:pulse 4s ease-in-out infinite}
+.card-inner{padding:22px}.badge{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:18px;background:rgba(30,132,190,.32);color:#8ee7ff;font-size:13px}.more{position:absolute;right:18px;top:15px;color:#b6c6da;letter-spacing:3px}.visual{height:190px;display:grid;place-items:center;position:relative}.bot{width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#d9f8ff 0 8%,#6dd6ff 22%,#4b74ff 50%,#132452 73%);box-shadow:0 0 36px rgba(85,178,255,.8);position:relative;animation:float 4s ease-in-out infinite}.bot:after{content:"";position:absolute;inset:24px 18px;border-radius:42%;background:linear-gradient(180deg,#07122a,#122e62)}.eye{position:absolute;z-index:2;width:8px;height:24px;border-radius:8px;background:#72e6ff;top:37px;box-shadow:0 0 10px #72e6ff}.eye.e1{left:35px}.eye.e2{right:35px}.ring{position:absolute;width:180px;height:72px;border:1px solid rgba(99,213,255,.75);border-radius:50%;transform:rotate(-12deg);animation:rotate 16s linear infinite}
+.folder{width:112px;height:84px;position:relative;animation:float 5s ease-in-out infinite}.folder span{position:absolute;width:82px;height:58px;border-radius:8px;background:linear-gradient(145deg,rgba(141,192,255,.9),rgba(67,97,171,.35));border:1px solid rgba(174,214,255,.55);transform:skewY(-7deg)}.folder span:nth-child(1){left:0;top:20px}.folder span:nth-child(2){left:12px;top:12px}.folder span:nth-child(3){left:24px;top:4px}
+.card h3{font-size:27px;margin:6px 0 10px}.card p{color:#9fb0c8;margin:0;line-height:1.7}.enter{margin-top:24px;border:none;border-radius:24px;padding:13px 27px;font-size:16px;font-weight:700;cursor:pointer;background:linear-gradient(90deg,#6ceaff,#78bfff 54%,#9d82ff);color:#081527;box-shadow:0 0 24px rgba(100,193,255,.6);transition:.2s}.enter:hover{transform:scale(1.04)}.disabled{margin-top:24px;border:1px solid rgba(153,180,219,.28);border-radius:24px;padding:12px 24px;color:#9cb0c9;background:rgba(255,255,255,.02)}.placeholder{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}.plus{width:76px;height:76px;border:1px dashed rgba(173,205,255,.4);border-radius:50%;display:grid;place-items:center;font-size:36px;color:#d5e7ff;margin-bottom:32px}.placeholder h3{font-size:22px}.footer-quote{margin:100px 0 0 45px;color:#bfd3ed;font-size:16px;font-style:italic;opacity:.8}
+.toast{position:fixed;right:30px;bottom:30px;background:#10243d;border:1px solid rgba(108,193,255,.35);padding:14px 18px;border-radius:12px;color:#d9efff;display:none;z-index:20}
+@media(max-width:1100px){.app{grid-template-columns:88px 1fr}.brand h3,.brand small,.nav-item span:not(.ico),.sidebar-footer{display:none}.brand{padding-left:6px}.nav-item{justify-content:center;padding:15px}.cards{grid-template-columns:repeat(2,1fr)}.card{min-height:330px}.hero .quote{display:none}}
+@media(max-width:720px){.app{display:block}.sidebar{display:none}.main{padding:18px}.topbar{justify-content:flex-start}.search{width:100%}.top-actions{display:none}.title h1{font-size:46px}.title p{font-size:17px}.hero{margin:20px 0 28px}.cards{grid-template-columns:1fr}.card{min-height:290px}.visual{height:130px}.orb{right:-220px}.horizon{left:0}.footer-quote{margin:45px 0 70px}}
+</style>
+</head>
+<body>
+<div class="bg"><div class="orb"></div><div class="horizon"></div></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo"></div><div><h3>My AI</h3><small>更聪明的自己</small></div></div>
+    <div class="nav">
+      <div class="nav-item active"><span class="ico">⌂</span><span>工作台</span></div>
+      <div class="nav-item"><span class="ico">◉</span><span>智能体</span></div>
+      <div class="nav-item"><span class="ico">☆</span><span>收藏</span></div>
+      <div class="nav-item"><span class="ico">⚙</span><span>设置</span></div>
+    </div>
+    <div class="sidebar-footer">与 AI 一起<br>让想法变成可能</div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="search">⌕ <span>搜索智能体 / 功能</span><span style="margin-left:auto">⌘ K</span></div>
+      <div class="top-actions"><span>♧</span><span>⚙</span><div class="avatar"></div><span>晚风⌄</span></div>
+    </div>
+    <section class="hero"><div class="title"><h1>AI工作台</h1><p>我的常用智能体入口</p></div><div class="quote">让 AI 成为<br>更好的自己 ——</div></section>
+    <section class="cards">
+      <article class="card primary" onclick="location.href='./assistant.html'">
+        <div class="more">•••</div><div class="card-inner"><span class="badge">★ 常用</span>
+          <div class="visual"><div class="ring"></div><div class="bot"><span class="eye e1"></span><span class="eye e2"></span></div></div>
+          <h3>AI教研助手</h3><p>课程设计｜专题研究｜教研支持</p>
+          <button class="enter" onclick="event.stopPropagation();location.href='./assistant.html'">进入 →</button>
+        </div>
+      </article>
+      <article class="card" onclick="showToast('资源维护助手暂未接入')">
+        <div class="more">•••</div><div class="card-inner"><div class="visual"><div class="folder"><span></span><span></span><span></span></div></div>
+        <h3>资源维护助手（预留）</h3><p>资料归档｜资源整理｜后续扩展</p><button class="disabled">即将接入</button></div>
+      </article>
+      <article class="card placeholder" onclick="showToast('这是预留扩展位')"><div class="more">•••</div><div class="plus">＋</div><h3>待接入智能体</h3><p>预留扩展位</p></article>
+      <article class="card placeholder" onclick="showToast('这是预留扩展位')"><div class="more">•••</div><div class="plus">＋</div><h3>待接入智能体</h3><p>预留扩展位</p></article>
+    </section>
+    <div class="footer-quote">好的工具，会让平凡的日常闪闪发光。</div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(window.__timer);window.__timer=setTimeout(()=>t.style.display='none',2200)}
+</script>
+</body>
+</html>
