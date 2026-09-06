@@ -2,640 +2,116 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>AI教研助手</title>
 <script src="./assets/jszip.min.js"></script>
 <style>
-:root{
-  --bg:#07111f;--panel:rgba(16,33,56,.78);--line:rgba(103,185,255,.28);
-  --text:#f4f8ff;--muted:#95a8c2;--cyan:#6de2ff;--blue:#5c8dff;--violet:#8f7cff;
-  --green:#57e6b2;--warn:#ffcf66;
-}
-*{box-sizing:border-box}
-html,body{margin:0;min-height:100%;font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;background:#07111f;color:var(--text)}
-body{
-  background:
-    radial-gradient(circle at 75% 8%,rgba(50,116,215,.25),transparent 30%),
-    linear-gradient(145deg,#07101c,#09182a 60%,#08111f);
-}
-body:before{
-  content:"";position:fixed;inset:0;pointer-events:none;opacity:.28;
-  background-image:radial-gradient(circle,#d9f1ff 0 1px,transparent 1.2px);
-  background-size:90px 90px
-}
-.shell{max-width:1500px;margin:auto;min-height:100vh;padding:24px}
-.top{display:flex;align-items:center;justify-content:space-between}
-.back{color:#cfe5ff;text-decoration:none;padding:10px 14px;border:1px solid rgba(130,190,255,.2);border-radius:12px;background:rgba(11,24,41,.45)}
-.logo{font-size:18px;color:#cce5ff}
-.hero{margin:36px 0 22px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px}
-.hero h1{font-size:48px;margin:0;background:linear-gradient(180deg,#fff,#8fd5ff 72%,#817fff);-webkit-background-clip:text;color:transparent}
-.hero p{font-size:18px;color:#aabbd1;margin:8px 0 0}
-.badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(28,85,122,.42);border:1px solid rgba(109,226,255,.2);color:#bdefff;font-size:13px}
-.layout{display:grid;grid-template-columns:minmax(360px,.7fr) minmax(0,1.55fr);gap:18px}
-.panel{background:linear-gradient(180deg,rgba(18,39,67,.78),rgba(10,24,43,.84));border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(16px);box-shadow:0 22px 60px rgba(0,0,0,.2)}
-.chat{min-height:730px;display:flex;flex-direction:column;overflow:hidden}
-.chat-head,.result-head{padding:17px 20px;border-bottom:1px solid rgba(130,187,255,.12);display:flex;align-items:center;justify-content:space-between}
-.status{font-size:13px;color:#9ae9ff}
-.status:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#50e7b4;box-shadow:0 0 10px #50e7b4;margin-right:8px}
-.messages{padding:20px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:14px;max-height:505px}
-.msg{max-width:92%;padding:14px 16px;border-radius:15px;line-height:1.7;white-space:pre-wrap;border:1px solid rgba(112,181,255,.14)}
-.ai{align-self:flex-start;background:rgba(41,69,103,.5)}
-.user{align-self:flex-end;background:linear-gradient(135deg,rgba(55,142,255,.38),rgba(108,95,238,.34))}
-.thinking{opacity:.7}
-.composer{padding:16px;border-top:1px solid rgba(130,187,255,.12)}
-.box{display:flex;gap:10px;border:1px solid rgba(105,190,255,.35);border-radius:16px;padding:10px;background:rgba(4,15,29,.5)}
-textarea{flex:1;min-height:82px;max-height:170px;resize:vertical;background:transparent;border:none;outline:none;color:#fff;font-size:15px;line-height:1.6}
-.send{align-self:flex-end;border:none;border-radius:13px;padding:12px 17px;background:linear-gradient(90deg,#6de7ff,#70bfff 55%,#9b82ff);color:#071525;font-weight:800;cursor:pointer}
-.send:disabled{opacity:.45;cursor:not-allowed}
-.quick{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 14px}
-.q{padding:9px 12px;border-radius:999px;border:1px solid rgba(123,181,255,.15);background:rgba(28,49,76,.5);cursor:pointer;color:#c7d7ea;font-size:13px}
-.result{min-height:730px;overflow:hidden}
-.actions{display:flex;gap:8px;flex-wrap:wrap}
-.btn{border:1px solid rgba(113,183,255,.25);background:rgba(31,57,88,.65);color:#dceaff;padding:9px 12px;border-radius:11px;cursor:pointer}
-.btn.primary{background:linear-gradient(90deg,#4c9dff,#7d7aff);border:none;color:white}
-.result-body{padding:20px;max-height:calc(100vh - 205px);overflow:auto}
-.empty{min-height:570px;display:grid;place-items:center;text-align:center;color:#7f94af;padding:40px}
-.empty strong{display:block;color:#cbd9ea;font-size:20px;margin-bottom:8px}
-.section{margin-bottom:22px}
-.section-title{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:700;margin-bottom:12px}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
-.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.summary-card{padding:13px 14px;border-radius:13px;background:rgba(28,49,76,.48);border:1px solid rgba(117,169,235,.14)}
-.summary-card small{display:block;color:#8398b4;margin-bottom:5px}.summary-card b{font-size:14px}
-.table-wrap{overflow:auto;border:1px solid rgba(109,171,238,.16);border-radius:14px;background:rgba(6,18,32,.35)}
-table{width:100%;border-collapse:collapse;min-width:1000px}
-th,td{padding:12px 13px;text-align:left;vertical-align:top;border-bottom:1px solid rgba(116,170,233,.12);line-height:1.55}
-th{position:sticky;top:0;background:#102744;color:#cfe4fb;font-size:13px;z-index:1}
-td{font-size:13px;color:#d8e3f0}
-.course{font-weight:700;color:#fff}.teacher{font-weight:700;color:#9fe9ff}
-.source{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(47,135,190,.2);color:#a8e8ff;font-size:12px}
-.row-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.mini{border:1px solid rgba(112,178,246,.2);background:rgba(23,45,72,.55);color:#bfd2e8;padding:5px 8px;border-radius:8px;cursor:pointer;font-size:11px}
-.evidence{margin-top:8px;border-top:1px dashed rgba(124,183,244,.2);padding-top:7px;color:#93a8c1;font-size:12px}
-.evidence summary{cursor:pointer;color:#87dfff}
-.external{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.ext-card{padding:14px;border:1px solid rgba(255,207,102,.2);background:rgba(91,70,24,.15);border-radius:13px}
-.ext-card .notice{color:#ffcf66;font-size:12px;margin-top:8px}
-.toast{position:fixed;right:24px;bottom:24px;background:#10243d;border:1px solid rgba(108,193,255,.35);padding:13px 17px;border-radius:12px;color:#d9efff;display:none;z-index:20}
-@media(max-width:1050px){.layout{grid-template-columns:1fr}.chat{min-height:620px}.result{min-height:600px}.result-body{max-height:none}.summary-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:650px){.shell{padding:14px}.hero h1{font-size:38px}.summary-grid{grid-template-columns:1fr}.external{grid-template-columns:1fr}.actions{width:100%}.hero{align-items:flex-start;flex-direction:column}}
+:root{--bg:#07111f;--panel:rgba(16,33,56,.78);--line:rgba(103,185,255,.28);--text:#f4f8ff;--muted:#95a8c2;--cyan:#6de2ff;--blue:#5c8dff;--violet:#8f7cff;--green:#57e6b2;--warn:#ffcf66}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;background:#07111f;color:var(--text)}
+body{background:radial-gradient(circle at 75% 8%,rgba(50,116,215,.25),transparent 30%),linear-gradient(145deg,#07101c,#09182a 60%,#08111f)}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.25;background-image:radial-gradient(circle,#d9f1ff 0 1px,transparent 1.2px);background-size:90px 90px}
+.shell{max-width:1500px;margin:auto;min-height:100vh;padding:24px}.top{display:flex;align-items:center;justify-content:space-between}.back{color:#cfe5ff;text-decoration:none;padding:10px 14px;border:1px solid rgba(130,190,255,.2);border-radius:12px;background:rgba(11,24,41,.45)}.logo{font-size:18px;color:#cce5ff}
+.hero{margin:30px 0 16px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px}.hero h1{font-size:46px;margin:0;background:linear-gradient(180deg,#fff,#8fd5ff 72%,#817fff);-webkit-background-clip:text;color:transparent}.hero p{font-size:17px;color:#aabbd1;margin:8px 0 0}.badge{padding:8px 12px;border-radius:999px;background:rgba(28,85,122,.42);border:1px solid rgba(109,226,255,.2);color:#bdefff;font-size:13px}
+.projectbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px;padding:12px 14px;border:1px solid rgba(110,178,246,.18);border-radius:15px;background:rgba(10,26,46,.58)}.projectmeta{display:flex;gap:12px;align-items:center;min-width:0}.projectname{font-weight:800;color:#fff}.customer{color:#9fb3ca;font-size:13px}.project-actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid rgba(113,183,255,.25);background:rgba(31,57,88,.65);color:#dceaff;padding:9px 12px;border-radius:11px;cursor:pointer}.btn.primary{background:linear-gradient(90deg,#4c9dff,#7d7aff);border:none;color:white}.btn.warn{border-color:rgba(255,207,102,.28);color:#ffd883}
+.layout{display:grid;grid-template-columns:minmax(360px,.7fr) minmax(0,1.55fr);gap:18px}.panel{background:linear-gradient(180deg,rgba(18,39,67,.78),rgba(10,24,43,.84));border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(16px);box-shadow:0 22px 60px rgba(0,0,0,.2)}.chat{min-height:730px;display:flex;flex-direction:column;overflow:hidden}.chat-head,.result-head{padding:17px 20px;border-bottom:1px solid rgba(130,187,255,.12);display:flex;align-items:center;justify-content:space-between}.status{font-size:13px;color:#9ae9ff}.status:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#50e7b4;box-shadow:0 0 10px #50e7b4;margin-right:8px}
+.messages{padding:20px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:14px;max-height:505px}.msg{max-width:92%;padding:14px 16px;border-radius:15px;line-height:1.7;white-space:pre-wrap;border:1px solid rgba(112,181,255,.14)}.ai{align-self:flex-start;background:rgba(41,69,103,.5)}.user{align-self:flex-end;background:linear-gradient(135deg,rgba(55,142,255,.38),rgba(108,95,238,.34))}.thinking{opacity:.7}.composer{padding:16px;border-top:1px solid rgba(130,187,255,.12)}.box{display:flex;gap:10px;border:1px solid rgba(105,190,255,.35);border-radius:16px;padding:10px;background:rgba(4,15,29,.5)}textarea{flex:1;min-height:82px;max-height:170px;resize:vertical;background:transparent;border:none;outline:none;color:#fff;font-size:15px;line-height:1.6}.send{align-self:flex-end;border:none;border-radius:13px;padding:12px 17px;background:linear-gradient(90deg,#6de7ff,#70bfff 55%,#9b82ff);color:#071525;font-weight:800;cursor:pointer}.send:disabled{opacity:.45}.quick{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 14px}.q{padding:9px 12px;border-radius:999px;border:1px solid rgba(123,181,255,.15);background:rgba(28,49,76,.5);cursor:pointer;color:#c7d7ea;font-size:13px}
+.result{min-height:730px;overflow:hidden}.actions{display:flex;gap:8px;flex-wrap:wrap}.result-body{padding:20px;max-height:calc(100vh - 220px);overflow:auto}.empty{min-height:570px;display:grid;place-items:center;text-align:center;color:#7f94af;padding:40px}.empty strong{display:block;color:#cbd9ea;font-size:20px;margin-bottom:8px}.section{margin-bottom:22px}.section-title{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:700;margin-bottom:12px}.dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.summary-card{padding:13px 14px;border-radius:13px;background:rgba(28,49,76,.48);border:1px solid rgba(117,169,235,.14)}.summary-card small{display:block;color:#8398b4;margin-bottom:5px}.summary-card b{font-size:14px}.research-card{padding:14px;border:1px solid rgba(109,226,255,.16);border-radius:14px;background:rgba(16,52,74,.2);line-height:1.7;color:#c9d8e8}.research-card small{color:#83a1bd}.table-wrap{overflow:auto;border:1px solid rgba(109,171,238,.16);border-radius:14px;background:rgba(6,18,32,.35)}table{width:100%;border-collapse:collapse;min-width:1040px}th,td{padding:12px 13px;text-align:left;vertical-align:top;border-bottom:1px solid rgba(116,170,233,.12);line-height:1.55}th{position:sticky;top:0;background:#102744;color:#cfe4fb;font-size:13px;z-index:1}td{font-size:13px;color:#d8e3f0}.course{font-weight:700;color:#fff}.teacher{font-weight:700;color:#9fe9ff}.source{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(47,135,190,.2);color:#a8e8ff;font-size:12px}.row-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.mini{border:1px solid rgba(112,178,246,.2);background:rgba(23,45,72,.55);color:#bfd2e8;padding:5px 8px;border-radius:8px;cursor:pointer;font-size:11px}.evidence{margin-top:8px;border-top:1px dashed rgba(124,183,244,.2);padding-top:7px;color:#93a8c1;font-size:12px}.evidence summary{cursor:pointer;color:#87dfff}.external{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ext-card{padding:14px;border:1px solid rgba(255,207,102,.2);background:rgba(91,70,24,.15);border-radius:13px}.ext-card .notice{color:#ffcf66;font-size:12px;margin-top:8px}
+.modal{position:fixed;inset:0;background:rgba(2,8,16,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}.modal.show{display:flex}.modal-card{width:min(720px,100%);max-height:80vh;overflow:auto;background:#0b1d33;border:1px solid rgba(111,180,247,.28);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45)}.modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid rgba(120,180,240,.14)}.modal-body{padding:16px}.project-item{padding:13px 14px;border:1px solid rgba(115,177,238,.14);border-radius:12px;margin-bottom:9px;background:rgba(23,47,76,.45);cursor:pointer}.project-item:hover{border-color:rgba(109,226,255,.35)}.project-item.active{border-color:#66dfff}.project-item small{display:block;color:#8ca2bb;margin-top:5px}.toast{position:fixed;right:24px;bottom:24px;background:#10243d;border:1px solid rgba(108,193,255,.35);padding:13px 17px;border-radius:12px;color:#d9efff;display:none;z-index:80}
+@media(max-width:1050px){.layout{grid-template-columns:1fr}.chat{min-height:620px}.result{min-height:600px}.result-body{max-height:none}.summary-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.shell{padding:14px}.hero h1{font-size:37px}.summary-grid{grid-template-columns:1fr}.external{grid-template-columns:1fr}.actions{width:100%}.hero{align-items:flex-start;flex-direction:column}.projectbar{align-items:flex-start;flex-direction:column}}
 </style>
 </head>
 <body>
 <div class="shell">
-  <div class="top">
-    <a class="back" href="./index.html">← 返回工作台</a>
-    <div class="logo">My AI · 教研</div>
-  </div>
+  <div class="top"><a class="back" href="./index.html">← 返回工作台</a><div class="logo">My AI · 教研</div></div>
+  <div class="hero"><div><h1>AI教研助手</h1><p>项目隔离｜客户调研｜正式师资匹配｜成果导出</p></div><div class="badge">● CloudBase 正式库驱动</div></div>
 
-  <div class="hero">
-    <div>
-      <h1>AI教研助手</h1>
-      <p>需求确认｜正式师资匹配｜结构化配课｜成果导出</p>
+  <div class="projectbar">
+    <div class="projectmeta"><div><div class="projectname" id="projectName">当前项目</div><div class="customer" id="customerName">客户名称：未填写</div></div></div>
+    <div class="project-actions">
+      <button class="btn primary" onclick="newProject()">＋ 新建项目</button>
+      <button class="btn" onclick="openProjects()">我的方案</button>
+      <button class="btn warn" onclick="refreshResearch()">重新调研客户</button>
     </div>
-    <div class="badge">● CloudBase 正式库驱动</div>
   </div>
 
   <div class="layout">
     <section class="panel chat">
-      <div class="chat-head">
-        <strong>教研对话</strong>
-        <span class="status">已连接数据库</span>
-      </div>
-
-      <div class="messages" id="messages">
-        <div class="msg ai">告诉我培训对象、主题和天数。关键条件缺失时，我会先在对话里一次性问清楚，再生成正式课表。</div>
-      </div>
-
+      <div class="chat-head"><strong>教研对话</strong><span class="status">项目上下文独立</span></div>
+      <div class="messages" id="messages"></div>
       <div class="quick">
         <button class="q" onclick="fill('金融机构干部，1天，主题是上海国际金融中心建设与跨境金融，请设计上午和下午两门课，并推荐师资。')">国际金融中心测试</button>
         <button class="q" onclick="fill('国企中层，3天，AI与数字化转型，每天上午下午各1讲，请生成完整课表。')">AI+数字化</button>
         <button class="q" onclick="fill('农商行中高层，2天，数字金融、风险管理、AI应用，请设计课程并推荐师资。')">农商行专题</button>
       </div>
-
-      <div class="composer">
-        <div class="box">
-          <textarea id="input" placeholder="例如：国企中层，3天，AI与数字化转型，每天上午下午各1讲"></textarea>
-          <button class="send" id="send" onclick="sendMessage()">发送 →</button>
-        </div>
-      </div>
+      <div class="composer"><div class="box"><textarea id="input" placeholder="输入当前项目的培训需求。新项目请先点击“新建项目”。"></textarea><button class="send" id="send" onclick="sendMessage()">发送 →</button></div></div>
     </section>
 
     <section class="panel result">
-      <div class="result-head">
-        <strong>正式方案</strong>
-        <div class="actions">
-          <button class="btn" onclick="copyFormatted()">复制文本</button>
-          <button class="btn" onclick="exportDocx()">下载 Word</button>
-          <button class="btn primary" onclick="exportXlsx()">下载 Excel</button>
-        </div>
-      </div>
-
-      <div class="result-body" id="resultBody">
-        <div class="empty">
-          <div>
-            <strong>等待生成正式方案</strong>
-            对话确认完成后，课表会在这里结构化展示，并可直接下载 Word / Excel。
-          </div>
-        </div>
-      </div>
+      <div class="result-head"><strong>正式方案</strong><div class="actions"><button class="btn" onclick="copyFormatted()">复制文本</button><button class="btn" onclick="exportDocx()">下载 Word</button><button class="btn primary" onclick="exportXlsx()">下载 Excel</button></div></div>
+      <div class="result-body" id="resultBody"></div>
     </section>
   </div>
 </div>
 
+<div class="modal" id="projectsModal"><div class="modal-card"><div class="modal-head"><strong>我的方案</strong><button class="btn" onclick="closeProjects()">关闭</button></div><div class="modal-body" id="projectsList"></div></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
+const PROJECTS_KEY='aiResearchProjectsV1';
+const CURRENT_KEY='aiResearchCurrentProjectIdV1';
 const messagesEl=document.getElementById('messages');
 const input=document.getElementById('input');
 const sendBtn=document.getElementById('send');
 const resultBody=document.getElementById('resultBody');
+let projects=[];let currentProject=null;let history=[];let currentPlan=null;
 
-let history=[];
-let currentPlan=null;
-
-function esc(v){
-  return String(v??'')
-    .replaceAll('&','&amp;')
-    .replaceAll('<','&lt;')
-    .replaceAll('>','&gt;')
-    .replaceAll('"','&quot;');
-}
-
-function xmlEsc(v){
-  return String(v??'')
-    .replaceAll('&','&amp;')
-    .replaceAll('<','&lt;')
-    .replaceAll('>','&gt;')
-    .replaceAll('"','&quot;')
-    .replaceAll("'","&apos;");
-}
-
-function showToast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.style.display='block';
-  clearTimeout(window.__toast);
-  window.__toast=setTimeout(()=>t.style.display='none',2200);
-}
-
+function uid(){return 'P'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function esc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')}
+function xmlEsc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&apos;')}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.style.display='none',2200)}
+function defaultAssistantText(){return '告诉我培训对象、主题和天数。关键条件缺失时，我会先问清楚。每个项目的对话和方案相互独立。'}
+function emptyResult(){resultBody.innerHTML='<div class="empty"><div><strong>等待生成正式方案</strong>当前项目确认需求后，将在这里展示结构化课表，并可下载 Word / Excel。</div></div>'}
+function saveProjects(){if(!currentProject)return;currentProject.history=history;currentProject.currentPlan=currentPlan;currentProject.updatedAt=new Date().toISOString();const i=projects.findIndex(p=>p.id===currentProject.id);if(i>=0)projects[i]=currentProject;else projects.unshift(currentProject);localStorage.setItem(PROJECTS_KEY,JSON.stringify(projects));localStorage.setItem(CURRENT_KEY,currentProject.id)}
+function loadProjects(){try{projects=JSON.parse(localStorage.getItem(PROJECTS_KEY)||'[]')}catch{projects=[]}const id=localStorage.getItem(CURRENT_KEY);currentProject=projects.find(p=>p.id===id)||projects[0]||null;if(!currentProject){createProject('未命名项目','',false)}else activateProject(currentProject.id,false)}
+function createProject(title,customerName,persist=true){const now=new Date().toISOString();currentProject={id:uid(),title:title||'未命名项目',customerName:customerName||'',createdAt:now,updatedAt:now,history:[],currentPlan:null,customerResearch:null};history=[];currentPlan=null;projects.unshift(currentProject);if(persist)saveProjects();renderProject();renderMessages();emptyResult();return currentProject}
+function newProject(){saveProjects();const title=prompt('请输入项目/班级名称（例如：XX银行中层干部培训班）','新培训项目');if(title===null)return;const customer=prompt('客户名称（可选）。填写后系统可进行公开资料调研：','');if(customer===null)return;createProject(title.trim()||'新培训项目',customer.trim(),true);showToast('已进入全新项目，上一个项目上下文不会带入')}
+function activateProject(id,persist=true){const p=projects.find(x=>x.id===id);if(!p)return;if(currentProject)saveProjects();currentProject=p;history=Array.isArray(p.history)?p.history:[];currentPlan=p.currentPlan||null;if(persist)localStorage.setItem(CURRENT_KEY,p.id);renderProject();renderMessages();if(currentPlan)renderPlan(currentPlan,false);else emptyResult();closeProjects()}
+function renderProject(){document.getElementById('projectName').textContent=currentProject?.title||'当前项目';document.getElementById('customerName').textContent='客户名称：'+(currentProject?.customerName||'未填写')}
+function renderMessages(){messagesEl.innerHTML='';if(!history.length){addMessage(defaultAssistantText(),'ai',false);return}history.forEach(m=>addMessage(m.content,m.role==='user'?'user':'ai',false))}
+function openProjects(){saveProjects();const list=document.getElementById('projectsList');list.innerHTML=projects.length?projects.map(p=>`<div class="project-item ${p.id===currentProject?.id?'active':''}" onclick="activateProject('${p.id}')"><b>${esc(p.title)}</b><small>${esc(p.customerName?'客户：'+p.customerName:'未填写客户')} ｜ 更新：${new Date(p.updatedAt||p.createdAt).toLocaleString()}</small></div>`).join(''):'暂无历史项目';document.getElementById('projectsModal').classList.add('show')}
+function closeProjects(){document.getElementById('projectsModal').classList.remove('show')}
 function fill(text){input.value=text;input.focus()}
-
-function addMessage(text,role,extra=''){
-  const el=document.createElement('div');
-  el.className=`msg ${role} ${extra}`;
-  el.textContent=text;
-  messagesEl.appendChild(el);
-  messagesEl.scrollTop=messagesEl.scrollHeight;
-  return el;
-}
-
-function renderPlan(plan){
-  currentPlan=plan;
-
-  if(plan.mode==='clarify'){
-    return;
-  }
-
-  const s=plan.requirement_summary||{};
-  const schedule=Array.isArray(plan.formal_schedule)?plan.formal_schedule:[];
-  const external=Array.isArray(plan.external_candidates)?plan.external_candidates:[];
-
-  const summaryCards=[
-    ['培训对象',s.audience],
-    ['行业',s.industry],
-    ['主题',s.theme],
-    ['天数',s.days],
-    ['课次',s.sessions],
-    ['培训目标',s.goals]
-  ].map(([k,v])=>`
-    <div class="summary-card"><small>${esc(k)}</small><b>${esc(v||'—')}</b></div>
-  `).join('');
-
-  const rows=schedule.map((r,i)=>`
-    <tr>
-      <td>${esc(r.day)}</td>
-      <td>${esc(r.period)}</td>
-      <td>${esc(r.module)}</td>
-      <td class="course">${esc(r.course_title||'待匹配')}</td>
-      <td>
-        <div class="teacher">${esc(r.teacher_name||'待匹配')}</div>
-        <div>${esc(r.institution||'')}</div>
-        ${r.source_type?`<div style="margin-top:5px"><span class="source">${esc(r.source_type)}</span></div>`:''}
-        <div class="row-actions">
-          <button class="mini" onclick="reviseRow(${i},'换老师')">换老师</button>
-          <button class="mini" onclick="reviseRow(${i},'换课程')">换课程</button>
-          <button class="mini" onclick="reviseRow(${i},'优化本行')">优化</button>
-        </div>
-      </td>
-      <td>
-        ${esc(r.reason||'')}
-        ${r.evidence?`
-          <details class="evidence">
-            <summary>查看依据</summary>
-            <div>${esc(r.evidence)}</div>
-          </details>`:''}
-      </td>
-    </tr>
-  `).join('');
-
-  const externalHtml=external.length?`
-    <div class="section">
-      <div class="section-title"><span class="dot" style="background:#ffcf66;box-shadow:0 0 10px #ffcf66"></span>外部候选补充</div>
-      <div class="external">
-        ${external.map(x=>`
-          <div class="ext-card">
-            <b>${esc(x.teacher_name)}</b> · ${esc(x.institution)}
-            <div style="margin-top:7px;color:#cbd8e7">${esc(x.suggested_topic)}</div>
-            <div style="margin-top:7px;color:#9fb1c7;font-size:13px">${esc(x.reason)}</div>
-            <div class="notice">${esc(x.notice||'未入正式库，需核验')}</div>
-          </div>
-        `).join('')}
-      </div>
-    </div>`:'';
-
-  resultBody.innerHTML=`
-    <div class="section">
-      <div class="section-title"><span class="dot"></span>需求摘要</div>
-      <div class="summary-grid">${summaryCards}</div>
-    </div>
-
-    <div class="section">
-      <div class="section-title"><span class="dot"></span>正式推荐课表</div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>天数</th>
-              <th>时段</th>
-              <th>课程模块</th>
-              <th>课程名称</th>
-              <th>推荐师资</th>
-              <th>推荐理由 / 依据</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows||'<tr><td colspan="6">当前正式库没有足够匹配结果。</td></tr>'}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    ${externalHtml}
-  `;
-}
-
-async function sendMessage(customText=''){
-  const content=(customText||input.value).trim();
-  if(!content||sendBtn.disabled)return;
-
-  addMessage(content,'user');
-  history.push({role:'user',content});
-  input.value='';
-  sendBtn.disabled=true;
-
-  const loading=addMessage('正在分析需求并检索正式师资课程库…','ai','thinking');
-
-  try{
-    const res=await fetch('./api/chat',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({messages:history.slice(-16)})
-    });
-
-    const data=await res.json();
-    loading.remove();
-
-    if(!res.ok)throw new Error(data.error||'请求失败');
-
-    addMessage(data.assistant_message||'已处理。','ai');
-    history.push({role:'assistant',content:data.assistant_message||''});
-
-    if(data.mode==='clarify'){
-      input.focus();
-      return;
-    }
-
-    renderPlan(data);
-
-  }catch(err){
-    loading.remove();
-    addMessage('调用失败：'+err.message,'ai');
-  }finally{
-    sendBtn.disabled=false;
-    input.focus();
-  }
-}
-
-function reviseRow(index,action){
-  if(!currentPlan?.formal_schedule?.[index])return;
-  const r=currentPlan.formal_schedule[index];
-  input.value=`请只修改${r.day||''}${r.period||''}这一行：${action}。其他时段保持不变。当前课程“${r.course_title||''}”，当前老师“${r.teacher_name||''}”。`;
-  input.focus();
-  showToast('修改指令已放入输入框');
-}
-
-function planText(){
-  if(!currentPlan)return '';
-
-  const s=currentPlan.requirement_summary||{};
-  const lines=[];
-  lines.push('AI教研助手课程方案');
-  lines.push('');
-  lines.push('一、培训需求概览');
-  if(s.audience)lines.push(`培训对象：${s.audience}`);
-  if(s.industry)lines.push(`行业：${s.industry}`);
-  if(s.theme)lines.push(`培训主题：${s.theme}`);
-  if(s.days)lines.push(`培训天数：${s.days}`);
-  if(s.sessions)lines.push(`课程安排：${s.sessions}`);
-  if(s.goals)lines.push(`培训目标：${s.goals}`);
-  lines.push('');
-  lines.push('二、正式推荐课表');
-
-  (currentPlan.formal_schedule||[]).forEach((r,i)=>{
-    lines.push(`${i+1}. ${r.day||''} ${r.period||''}`);
-    lines.push(`课程模块：${r.module||''}`);
-    lines.push(`课程名称：${r.course_title||'待匹配'}`);
-    lines.push(`推荐师资：${r.teacher_name||'待匹配'}${r.institution?'｜'+r.institution:''}`);
-    if(r.source_type)lines.push(`师资来源：${r.source_type}`);
-    if(r.reason)lines.push(`推荐理由：${r.reason}`);
-    if(r.evidence)lines.push(`推荐依据：${r.evidence}`);
-    lines.push('');
-  });
-
-  const ext=currentPlan.external_candidates||[];
-  if(ext.length){
-    lines.push('三、外部候选补充');
-    ext.forEach((x,i)=>{
-      lines.push(`${i+1}. ${x.teacher_name||''}｜${x.institution||''}`);
-      if(x.suggested_topic)lines.push(`建议方向：${x.suggested_topic}`);
-      if(x.reason)lines.push(`推荐理由：${x.reason}`);
-      lines.push(`说明：${x.notice||'未入正式库，需核验'}`);
-      lines.push('');
-    });
-  }
-
-  return lines.join('\n');
-}
-
-async function copyFormatted(){
-  if(!currentPlan){showToast('还没有可复制的正式方案');return}
-  try{
-    await navigator.clipboard.writeText(planText());
-    showToast('已复制排版文本');
-  }catch{
-    showToast('复制失败');
-  }
-}
-
-function downloadBlob(blob,filename){
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=filename;
-  document.body.appendChild(a);a.click();a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function excelColName(n){
-  let s='';
-  while(n>0){
-    n--;
-    s=String.fromCharCode(65+(n%26))+s;
-    n=Math.floor(n/26);
-  }
-  return s;
-}
-
-function sheetXml(rows,widths=[]){
-  const cols=widths.length
-    ? `<cols>${widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols>`
-    :'';
-
-  const sheetData=rows.map((row,ri)=>{
-    const cells=row.map((v,ci)=>{
-      const ref=`${excelColName(ci+1)}${ri+1}`;
-      return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(v)}</t></is></c>`;
-    }).join('');
-    return `<row r="${ri+1}">${cells}</row>`;
-  }).join('');
-
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-${cols}
-<sheetData>${sheetData}</sheetData>
-</worksheet>`;
-}
-
-async function exportXlsx(){
-  if(!currentPlan){showToast('还没有可导出的正式方案');return}
-
-  const zip=new JSZip();
-
-  const formalRows=[
-    ['天数','时段','课程模块','课程名称','推荐师资','单位','师资来源','推荐理由','推荐依据']
-  ];
-
-  (currentPlan.formal_schedule||[]).forEach(r=>{
-    formalRows.push([
-      r.day||'',r.period||'',r.module||'',r.course_title||'待匹配',
-      r.teacher_name||'待匹配',r.institution||'',r.source_type||'',
-      r.reason||'',r.evidence||''
-    ]);
-  });
-
-  const externalRows=[['姓名','单位','师资来源','建议专题/课程','推荐理由','核验说明']];
-  (currentPlan.external_candidates||[]).forEach(x=>{
-    externalRows.push([
-      x.teacher_name||'',x.institution||'',x.source_type||'',
-      x.suggested_topic||'',x.reason||'',x.notice||'未入正式库，需核验'
-    ]);
-  });
-
-  const s=currentPlan.requirement_summary||{};
-  const infoRows=[
-    ['项目','内容'],
-    ['培训对象',s.audience||''],
-    ['行业',s.industry||''],
-    ['培训主题',s.theme||''],
-    ['培训天数',s.days||''],
-    ['课程安排',s.sessions||''],
-    ['培训目标',s.goals||''],
-    ['数据说明','正式课表仅使用已确认的库内师资课程关系；外部候选单独列示。']
-  ];
-
-  zip.file('[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Default Extension="xml" ContentType="application/xml"/>
-<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-<Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-</Types>`);
-
-  zip.folder('_rels').file('.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-</Relationships>`);
-
-  zip.folder('xl').file('workbook.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
- xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<sheets>
-<sheet name="正式推荐课表" sheetId="1" r:id="rId1"/>
-<sheet name="外部候选补充" sheetId="2" r:id="rId2"/>
-<sheet name="方案说明" sheetId="3" r:id="rId3"/>
-</sheets>
-</workbook>`);
-
-  zip.folder('xl').folder('_rels').file('workbook.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
-<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>
-</Relationships>`);
-
-  zip.folder('xl').folder('worksheets').file('sheet1.xml',sheetXml(formalRows,[10,10,22,34,16,28,14,46,46]));
-  zip.folder('xl').folder('worksheets').file('sheet2.xml',sheetXml(externalRows,[16,28,14,34,46,24]));
-  zip.folder('xl').folder('worksheets').file('sheet3.xml',sheetXml(infoRows,[18,70]));
-
-  const blob=await zip.generateAsync({
-    type:'blob',
-    mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  });
-
-  downloadBlob(blob,'AI教研助手_课程方案.xlsx');
-  showToast('Excel 已生成');
-}
-
-function wParagraph(text,bold=false,size=22){
-  return `<w:p><w:r>${bold?'<w:rPr><w:b/><w:sz w:val="'+size+'"/></w:rPr>':''}<w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r></w:p>`;
-}
-
-function wTable(rows){
-  const body=rows.map((row,ri)=>{
-    const cells=row.map(v=>`<w:tc>
-<w:tcPr><w:tcW w:w="2000" w:type="dxa"/></w:tcPr>
-<w:p><w:r>${ri===0?'<w:rPr><w:b/></w:rPr>':''}<w:t xml:space="preserve">${xmlEsc(v)}</w:t></w:r></w:p>
-</w:tc>`).join('');
-    return `<w:tr>${cells}</w:tr>`;
-  }).join('');
-
-  return `<w:tbl>
-<w:tblPr>
-<w:tblBorders>
-<w:top w:val="single" w:sz="4" w:color="B7C9E2"/>
-<w:left w:val="single" w:sz="4" w:color="B7C9E2"/>
-<w:bottom w:val="single" w:sz="4" w:color="B7C9E2"/>
-<w:right w:val="single" w:sz="4" w:color="B7C9E2"/>
-<w:insideH w:val="single" w:sz="4" w:color="D8E3F0"/>
-<w:insideV w:val="single" w:sz="4" w:color="D8E3F0"/>
-</w:tblBorders>
-</w:tblPr>${body}</w:tbl>`;
-}
-
-async function exportDocx(){
-  if(!currentPlan){showToast('还没有可导出的正式方案');return}
-
-  const zip=new JSZip();
-  const s=currentPlan.requirement_summary||{};
-
-  let doc='';
-  doc+=wParagraph('AI教研助手课程方案',true,32);
-  doc+=wParagraph('');
-  doc+=wParagraph('一、培训需求概览',true,26);
-
-  const info=[
-    ['培训对象',s.audience||''],
-    ['行业',s.industry||''],
-    ['培训主题',s.theme||''],
-    ['培训天数',s.days||''],
-    ['课程安排',s.sessions||''],
-    ['培训目标',s.goals||'']
-  ].filter(x=>x[1]);
-  doc+=wTable([['项目','内容'],...info]);
-
-  doc+=wParagraph('');
-  doc+=wParagraph('二、正式推荐课表',true,26);
-
-  const scheduleRows=[
-    ['天数/时段','课程模块','课程名称','推荐师资','推荐理由']
-  ];
-
-  (currentPlan.formal_schedule||[]).forEach(r=>{
-    scheduleRows.push([
-      `${r.day||''} ${r.period||''}`.trim(),
-      r.module||'',
-      r.course_title||'待匹配',
-      `${r.teacher_name||'待匹配'}${r.institution?'｜'+r.institution:''}`,
-      r.reason||''
-    ]);
-  });
-  doc+=wTable(scheduleRows);
-
-  const ext=currentPlan.external_candidates||[];
-  if(ext.length){
-    doc+=wParagraph('');
-    doc+=wParagraph('三、外部候选补充',true,26);
-    ext.forEach((x,i)=>{
-      doc+=wParagraph(`${i+1}. ${x.teacher_name||''}｜${x.institution||''}`,true,22);
-      if(x.suggested_topic)doc+=wParagraph(`建议专题：${x.suggested_topic}`);
-      if(x.reason)doc+=wParagraph(`推荐理由：${x.reason}`);
-      doc+=wParagraph(`说明：${x.notice||'未入正式库，需核验'}`);
-    });
-  }
-
-  // Future teacher profiles can be included only when verified/profile data exists.
-  const profiles=Array.isArray(currentPlan.teacher_profiles)?currentPlan.teacher_profiles:[];
-  if(profiles.length){
-    doc+=wParagraph('');
-    doc+=wParagraph(ext.length?'四、推荐师资简介':'三、推荐师资简介',true,26);
-    profiles.forEach(p=>{
-      doc+=wParagraph(p.teacher_name||'',true,22);
-      if(p.profile)doc+=wParagraph(p.profile);
-      if(p.profile_source_label)doc+=wParagraph(`资料来源：${p.profile_source_label}`);
-    });
-  }
-
-  const documentXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:body>
-${doc}
-<w:sectPr>
-<w:pgSz w:w="11906" w:h="16838"/>
-<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>
-</w:sectPr>
-</w:body>
-</w:document>`;
-
-  zip.file('[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Default Extension="xml" ContentType="application/xml"/>
-<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-</Types>`);
-
-  zip.folder('_rels').file('.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>`);
-
-  zip.folder('word').file('document.xml',documentXml);
-
-  const blob=await zip.generateAsync({
-    type:'blob',
-    mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  });
-
-  downloadBlob(blob,'AI教研助手_课程方案.docx');
-  showToast('Word 已生成');
-}
-
-input.addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&!e.shiftKey){
-    e.preventDefault();
-    sendMessage();
-  }
-});
+function addMessage(text,role,save=false){const el=document.createElement('div');el.className=`msg ${role}`;el.textContent=text;messagesEl.appendChild(el);messagesEl.scrollTop=messagesEl.scrollHeight;if(save){history.push({role:role==='user'?'user':'assistant',content:text});saveProjects()}return el}
+
+async function researchCustomer(force=false){if(!currentProject?.customerName)return null;if(currentProject.customerResearch&&!force)return currentProject.customerResearch;const loading=addMessage(`正在调研客户“${currentProject.customerName}”的公开资料…`,'ai',false);try{const res=await fetch('./api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'research_customer',customer_name:currentProject.customerName})});const data=await res.json();loading.remove();currentProject.customerResearch=data;saveProjects();if(data.research_available===false){addMessage(data.message||'客户调研未启用，方案仍可继续生成。','ai',true)}else if(data.error){addMessage('客户公开资料调研失败，本次不会补写未经核验的客户事实：'+data.error,'ai',true)}else{addMessage(`已完成客户公开资料调研，获取 ${data.sources?.length||0} 条来源。后续Word将基于这些公开资料生成培训背景。`,'ai',true)}return data}catch(err){loading.remove();addMessage('客户公开资料调研失败，本次不会补写客户事实：'+err.message,'ai',true);return null}}
+async function refreshResearch(){if(!currentProject?.customerName){showToast('当前项目没有填写客户名称');return}await researchCustomer(true);if(currentPlan)renderPlan(currentPlan,false)}
+
+function renderPlan(plan,save=true){currentPlan=plan;if(save)saveProjects();if(plan.mode==='clarify')return;const s=plan.requirement_summary||{};const schedule=Array.isArray(plan.formal_schedule)?plan.formal_schedule:[];const external=Array.isArray(plan.external_candidates)?plan.external_candidates:[];const research=currentProject?.customerResearch;
+const summary=[['培训对象',s.audience],['行业',s.industry],['主题',s.theme],['天数',s.days],['课次',s.sessions],['培训目标',s.goals]].map(([k,v])=>`<div class="summary-card"><small>${esc(k)}</small><b>${esc(v||'—')}</b></div>`).join('');
+const researchHtml=(research?.background||research?.training_relevance)?`<div class="section"><div class="section-title"><span class="dot"></span>客户公开资料调研</div><div class="research-card">${research.background?`<div>${esc(research.background)}</div>`:''}${research.training_relevance?`<div style="margin-top:8px"><small>与培训设计相关的公开线索：</small>${esc(research.training_relevance)}</div>`:''}<div style="margin-top:8px"><small>来源：${research.sources?.length||0}条公开资料，${research.researched_at?new Date(research.researched_at).toLocaleString():''}</small></div></div></div>`:'';
+const rows=schedule.map((r,i)=>`<tr><td>${esc(r.day)}</td><td>${esc(r.period)}</td><td>${esc(r.module)}</td><td class="course">${esc(r.course_title||'待匹配')}</td><td><div class="teacher">${esc(r.teacher_name||'待匹配')}</div><div>${esc(r.institution||'')}</div>${r.source_type?`<div style="margin-top:5px"><span class="source">${esc(r.source_type)}</span></div>`:''}${r.teacher_profile?`<details class="evidence"><summary>师资简介</summary><div>${esc(r.teacher_profile)}</div></details>`:''}<div class="row-actions"><button class="mini" onclick="reviseRow(${i},'换老师')">换老师</button><button class="mini" onclick="reviseRow(${i},'换课程')">换课程</button><button class="mini" onclick="reviseRow(${i},'优化本行')">优化</button></div></td><td>${esc(r.reason||'')}${r.evidence?`<details class="evidence"><summary>查看依据</summary><div>${esc(r.evidence)}</div></details>`:''}</td></tr>`).join('');
+const externalHtml=external.length?`<div class="section"><div class="section-title"><span class="dot" style="background:#ffcf66;box-shadow:0 0 10px #ffcf66"></span>外部候选补充</div><div class="external">${external.map(x=>`<div class="ext-card"><b>${esc(x.teacher_name)}</b> · ${esc(x.institution)}<div style="margin-top:7px;color:#cbd8e7">${esc(x.suggested_topic)}</div><div style="margin-top:7px;color:#9fb1c7;font-size:13px">${esc(x.reason)}</div><div class="notice">${esc(x.notice||'未入正式库，需核验')}</div></div>`).join('')}</div></div>`:'';
+resultBody.innerHTML=`<div class="section"><div class="section-title"><span class="dot"></span>需求摘要</div><div class="summary-grid">${summary}</div></div>${researchHtml}<div class="section"><div class="section-title"><span class="dot"></span>正式推荐课表</div><div class="table-wrap"><table><thead><tr><th>天数</th><th>时段</th><th>课程模块</th><th>课程名称</th><th>推荐师资</th><th>推荐理由 / 依据</th></tr></thead><tbody>${rows||'<tr><td colspan="6">当前正式库没有足够匹配结果。</td></tr>'}</tbody></table></div></div>${externalHtml}`}
+
+async function sendMessage(){const content=input.value.trim();if(!content||sendBtn.disabled)return;addMessage(content,'user',true);input.value='';sendBtn.disabled=true;const loading=addMessage('正在分析当前项目需求并检索正式师资课程库…','ai',false);try{if(currentProject?.customerName&&!currentProject.customerResearch)await researchCustomer(false);const res=await fetch('./api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history.slice(-16)})});const data=await res.json();loading.remove();if(!res.ok)throw new Error(data.error||'请求失败');addMessage(data.assistant_message||'已处理。','ai',true);if(data.mode!=='clarify')renderPlan(data,true)}catch(err){loading.remove();addMessage('调用失败：'+err.message,'ai',true)}finally{sendBtn.disabled=false;input.focus()}}
+function reviseRow(index,action){if(!currentPlan?.formal_schedule?.[index])return;const r=currentPlan.formal_schedule[index];input.value=`请只修改${r.day||''}${r.period||''}这一行：${action}。其他时段保持不变。当前课程“${r.course_title||''}”，当前老师“${r.teacher_name||''}”。`;input.focus();showToast('修改指令已放入输入框')}
+
+function uniqueProfiles(){const map=new Map();(currentPlan?.formal_schedule||[]).forEach(r=>{if(r.teacher_name&&r.teacher_name!=='待匹配'&&!map.has(r.teacher_name))map.set(r.teacher_name,{name:r.teacher_name,institution:r.institution||'',profile:r.teacher_profile||''})});return [...map.values()]}
+function planText(){if(!currentPlan)return'';const s=currentPlan.requirement_summary||{},r=currentProject?.customerResearch;const lines=[`${currentProject?.title||'AI教研助手'}课程方案`,'','一、培训需求概览'];if(currentProject?.customerName)lines.push(`客户名称：${currentProject.customerName}`);if(s.audience)lines.push(`培训对象：${s.audience}`);if(s.industry)lines.push(`行业：${s.industry}`);if(s.theme)lines.push(`培训主题：${s.theme}`);if(s.days)lines.push(`培训天数：${s.days}`);if(s.sessions)lines.push(`课程安排：${s.sessions}`);if(s.goals)lines.push(`培训目标：${s.goals}`);if(r?.background){lines.push('','二、培训背景',r.background)}if(r?.training_relevance){lines.push('','三、需求解读',`结合用户明确培训需求与客户公开资料，本项目可重点关注：${r.training_relevance}`)}lines.push('','四、正式推荐课表');(currentPlan.formal_schedule||[]).forEach((x,i)=>{lines.push(`${i+1}. ${x.day||''} ${x.period||''}｜${x.course_title||'待匹配'}｜${x.teacher_name||'待匹配'}${x.institution?'｜'+x.institution:''}`);if(x.reason)lines.push(`推荐理由：${x.reason}`)});const ps=uniqueProfiles();if(ps.length){lines.push('','五、推荐师资简介');ps.forEach(x=>{lines.push(`${x.name}${x.institution?'｜'+x.institution:''}`);if(x.profile)lines.push(x.profile)})}return lines.join('\n')}
+async function copyFormatted(){if(!currentPlan){showToast('还没有可复制的正式方案');return}try{await navigator.clipboard.writeText(planText());showToast('已复制排版文本')}catch{showToast('复制失败')}}
+function downloadBlob(blob,filename){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
+function excelColName(n){let s='';while(n>0){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26)}return s}
+function sheetXml(rows,widths=[]){const cols=widths.length?`<cols>${widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols>`:'';const data=rows.map((row,ri)=>`<row r="${ri+1}">${row.map((v,ci)=>`<c r="${excelColName(ci+1)}${ri+1}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(v)}</t></is></c>`).join('')}</row>`).join('');return`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${cols}<sheetData>${data}</sheetData></worksheet>`}
+
+async function exportXlsx(){if(!currentPlan){showToast('还没有可导出的正式方案');return}const zip=new JSZip();const formal=[['天数','时段','课程模块','课程名称','推荐师资','单位','师资简介','师资来源','推荐理由','推荐依据']];(currentPlan.formal_schedule||[]).forEach(r=>formal.push([r.day||'',r.period||'',r.module||'',r.course_title||'待匹配',r.teacher_name||'待匹配',r.institution||'',r.teacher_profile||'',r.source_type||'',r.reason||'',r.evidence||'']));const ext=[['姓名','单位','师资来源','建议专题/课程','推荐理由','核验说明']];(currentPlan.external_candidates||[]).forEach(x=>ext.push([x.teacher_name||'',x.institution||'',x.source_type||'',x.suggested_topic||'',x.reason||'',x.notice||'未入正式库，需核验']));const s=currentPlan.requirement_summary||{},r=currentProject?.customerResearch;const info=[['项目','内容'],['项目名称',currentProject?.title||''],['客户名称',currentProject?.customerName||''],['培训对象',s.audience||''],['行业',s.industry||''],['培训主题',s.theme||''],['培训天数',s.days||''],['课程安排',s.sessions||''],['培训目标',s.goals||''],['客户公开资料背景',r?.background||''],['公开资料培训相关线索',r?.training_relevance||''],['数据说明','正式课表仅使用已确认的库内师资课程关系；师资简介只使用库内已有资料或正式字段可支持的信息。']];zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');zip.folder('_rels').file('.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');zip.folder('xl').file('workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="正式推荐课表" sheetId="1" r:id="rId1"/><sheet name="外部候选补充" sheetId="2" r:id="rId2"/><sheet name="方案说明" sheetId="3" r:id="rId3"/></sheets></workbook>');zip.folder('xl').folder('_rels').file('workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/></Relationships>');zip.folder('xl').folder('worksheets').file('sheet1.xml',sheetXml(formal,[10,10,22,34,16,28,58,14,42,42]));zip.folder('xl').folder('worksheets').file('sheet2.xml',sheetXml(ext,[16,28,14,34,44,24]));zip.folder('xl').folder('worksheets').file('sheet3.xml',sheetXml(info,[20,80]));downloadBlob(await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${currentProject?.title||'AI教研助手'}_课程方案.xlsx`);showToast('Excel 已生成')}
+
+function wP(text,style='Normal',bold=false){return`<w:p><w:pPr><w:pStyle w:val="${style}"/></w:pPr><w:r>${bold?'<w:rPr><w:b/></w:rPr>':''}<w:t xml:space="preserve">${xmlEsc(text)}</w:t></w:r></w:p>`}
+function wTable(rows,widths){return`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/><w:tblLook w:val="04A0"/></w:tblPr>${rows.map((row,ri)=>`<w:tr>${row.map((v,ci)=>`<w:tc><w:tcPr><w:tcW w:w="${widths?.[ci]||1800}" w:type="dxa"/>${ri===0?'<w:shd w:fill="D9EAF7"/>':''}</w:tcPr><w:p><w:r>${ri===0?'<w:rPr><w:b/></w:rPr>':''}<w:t xml:space="preserve">${xmlEsc(v)}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`).join('')}</w:tbl>`}
+function docStyles(){return`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:rFonts w:eastAsia="宋体"/><w:sz w:val="22"/></w:rPr><w:pPr><w:spacing w:line="360" w:lineRule="auto"/></w:pPr></w:style><w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:pPr><w:jc w:val="center"/><w:spacing w:after="360"/></w:pPr><w:rPr><w:rFonts w:eastAsia="微软雅黑"/><w:b/><w:sz w:val="36"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:pPr><w:spacing w:before="320" w:after="160"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:rFonts w:eastAsia="微软雅黑"/><w:b/><w:color w:val="17365D"/><w:sz w:val="28"/></w:rPr></w:style><w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:color="B7C9E2"/><w:left w:val="single" w:sz="4" w:color="B7C9E2"/><w:bottom w:val="single" w:sz="4" w:color="B7C9E2"/><w:right w:val="single" w:sz="4" w:color="B7C9E2"/><w:insideH w:val="single" w:sz="4" w:color="D8E3F0"/><w:insideV w:val="single" w:sz="4" w:color="D8E3F0"/></w:tblBorders></w:tblPr></w:style></w:styles>`}
+async function exportDocx(){if(!currentPlan){showToast('还没有可导出的正式方案');return}const zip=new JSZip(),s=currentPlan.requirement_summary||{},r=currentProject?.customerResearch;let body='';body+=wP(`${currentProject?.title||'AI教研助手'}课程方案`,'Title');if(currentProject?.customerName)body+=wP(`客户：${currentProject.customerName}`,'Normal');body+=wP('一、培训需求概览','Heading1');const info=[['项目','内容'],['培训对象',s.audience||''],['行业',s.industry||''],['培训主题',s.theme||''],['培训天数',s.days||''],['课程安排',s.sessions||''],['培训目标',s.goals||'']].filter(x=>x[1]||x[0]==='项目');body+=wTable(info,[1800,7000]);let section=2;if(r?.background){body+=wP(`${['','一','二','三','四','五','六','七'][section]}、培训背景`,'Heading1');body+=wP(r.background);section++}if(r?.training_relevance){body+=wP(`${['','一','二','三','四','五','六','七'][section]}、需求解读`,'Heading1');body+=wP(`结合用户明确提出的培训需求与客户公开资料，可重点关注以下背景线索：${r.training_relevance}。该部分仅作为课程设计参考，不代表客户未明确表达的内部需求。`);section++}body+=wP(`${['','一','二','三','四','五','六','七'][section]}、课程设计思路`,'Heading1');body+=wP(`围绕“${s.theme||'培训主题'}”，按照${s.days||''}${s.sessions?`、共${s.sessions}`:''}进行模块化安排，优先从正式师资课程库中选择已确认课程关系，并依据主题匹配度、适用对象和研究方向进行组合。`);section++;body+=wP(`${['','一','二','三','四','五','六','七'][section]}、课程安排`,'Heading1');const rows=[['时间','课程模块','课程名称','推荐师资','单位','推荐理由']];(currentPlan.formal_schedule||[]).forEach(x=>rows.push([`${x.day||''} ${x.period||''}`.trim(),x.module||'',x.course_title||'待匹配',x.teacher_name||'待匹配',x.institution||'',x.reason||'']));body+=wTable(rows,[1400,1800,2600,1400,2200,2600]);section++;const ps=uniqueProfiles().filter(x=>x.profile);if(ps.length){body+=wP(`${['','一','二','三','四','五','六','七'][section]}、推荐师资简介`,'Heading1');ps.forEach(x=>{body+=wP(`${x.name}${x.institution?'｜'+x.institution:''}`,'Normal',true);body+=wP(x.profile)});section++}const ext=currentPlan.external_candidates||[];if(ext.length){body+=wP(`${['','一','二','三','四','五','六','七'][section]}、外部候选补充`,'Heading1');ext.forEach((x,i)=>{body+=wP(`${i+1}. ${x.teacher_name||''}｜${x.institution||''}`,'Normal',true);if(x.suggested_topic)body+=wP(`建议专题：${x.suggested_topic}`);if(x.reason)body+=wP(`推荐理由：${x.reason}`);body+=wP(`说明：${x.notice||'未入正式库，需核验'}`)})}if(r?.sources?.length){body+=wP('附：客户公开资料来源','Heading1');r.sources.slice(0,8).forEach((x,i)=>body+=wP(`${i+1}. ${x.title}｜${x.url}`))}const document=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1276" w:right="1276" w:bottom="1276" w:left="1276"/><w:pgNumType w:start="1"/></w:sectPr></w:body></w:document>`;zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>');zip.folder('_rels').file('.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');zip.folder('word').file('document.xml',document);zip.folder('word').file('styles.xml',docStyles());zip.folder('word').folder('_rels').file('document.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');downloadBlob(await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),`${currentProject?.title||'AI教研助手'}_课程方案.docx`);showToast('Word 已生成')}
+
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}});
+loadProjects();renderProject();renderMessages();if(currentPlan)renderPlan(currentPlan,false);else emptyResult();
 </script>
 </body>
 </html>
