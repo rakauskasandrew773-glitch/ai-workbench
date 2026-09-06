@@ -77,86 +77,86 @@ async function callDeepSeek(apiKey, messages, maxTokens = 1800) {
 }
 
 
-async function researchCustomer(tavilyKey, deepseekKey, customerName) {
-  if (!tavilyKey) {
+async function callDeepSeekWebResearch(apiKey, customerName) {
+  const instructions = `你是企业/机构培训项目前期公开资料调研助手。必须先使用联网搜索工具，再根据搜索到的公开网页作答。\n\n事实规则：\n1. 只能使用本次联网搜索实际找到的公开信息，不得使用模型记忆补充客户事实。\n2. 优先客户官网、政府官网、官方新闻稿、权威媒体；普通网页仅作补充。\n3. 不得把推测写成客户内部事实或真实需求。\n4. 来源 URL 必须来自本次搜索结果，不得编造 URL。\n5. 无可靠依据的字段留空。\n6. 只输出严格 JSON。`;
+
+  const input = `请调研客户“${customerName}”，重点检索：机构性质/主营或职责、公开战略重点、2025-2026近期重点工作、数字化/人工智能/金融科技/人才队伍建设等与培训设计可能相关的公开信息。\n\n输出 JSON：\n{\n  "background":"1-2段客户背景，只写搜索结果支持的事实",\n  "training_relevance":"1段与培训方案设计相关的公开背景线索。必须用‘结合公开资料可关注…’这类分析口径，不得宣称为客户未明确表达的内部需求",\n  "sources":[\n    {\n      "title":"网页标题",\n      "url":"本次搜索结果中的真实URL",\n      "published_at":"能确认则填写，否则空字符串",\n      "summary":"该来源实际支持的1句关键信息"\n    }\n  ]\n}\n\n最多保留8条最可靠、最相关来源。`;
+
+  const res = await fetch("https://api.deepseek.com/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: "deepseek-v4-flash",
+      instructions,
+      input,
+      tools: [{ type: "web_search" }],
+      tool_choice: { type: "web_search" },
+      text: { format: { type: "json_object" } },
+      max_output_tokens: 2200,
+      temperature: 0.1,
+      stream: false
+    })
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error?.message || `DeepSeek 联网调研返回 ${res.status}`);
+  }
+
+  const outputText = (Array.isArray(data?.output) ? data.output : [])
+    .filter(item => item?.type === "message")
+    .flatMap(item => Array.isArray(item?.content) ? item.content : [])
+    .filter(part => part?.type === "output_text" && typeof part?.text === "string")
+    .map(part => part.text)
+    .join("\n")
+    .trim();
+
+  const parsed = extractJson(outputText);
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("DeepSeek 联网调研未返回有效结构化结果");
+  }
+
+  return parsed;
+}
+
+async function researchCustomer(deepseekKey, customerName) {
+  if (!deepseekKey) {
     return {
       research_available: false,
       customer_name: customerName,
-      message: "客户公开资料调研尚未启用：请在 EdgeOne 环境变量中配置 TAVILY_API_KEY。",
+      message: "客户公开资料调研尚未启用：服务器未配置 DEEPSEEK_API_KEY。",
       sources: [],
       background: "",
       training_relevance: ""
     };
   }
 
-  const query = `${customerName} 官方 官网 战略 重点工作 数字化 人才 培训 2026`;
-  const res = await fetch("https://api.tavily.com/search", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      api_key: tavilyKey,
-      query,
-      search_depth: "advanced",
-      max_results: 8,
-      include_answer: false,
-      include_raw_content: false
-    })
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.detail || data?.message || `客户调研服务返回 ${res.status}`);
-  }
-
-  const sources = (Array.isArray(data?.results) ? data.results : [])
-    .filter(x => x?.url && x?.title)
+  const parsed = await callDeepSeekWebResearch(deepseekKey, customerName);
+  const sources = (Array.isArray(parsed?.sources) ? parsed.sources : [])
+    .filter(x => x && typeof x.url === "string" && /^https?:\/\//i.test(x.url) && typeof x.title === "string")
     .slice(0, 8)
     .map(x => ({
-      title: x.title,
-      url: x.url,
-      content: String(x.content || "").slice(0, 1200),
-      score: x.score ?? null
+      title: String(x.title || "").trim(),
+      url: String(x.url || "").trim(),
+      published_at: String(x.published_at || "").trim(),
+      content: String(x.summary || "").trim().slice(0, 800),
+      provider: "deepseek_web_search"
     }));
-
-  if (!sources.length) {
-    return {
-      research_available: true,
-      customer_name: customerName,
-      researched_at: new Date().toISOString(),
-      sources: [],
-      background: "",
-      training_relevance: "",
-      message: "未检索到可用于形成客户背景的公开资料。"
-    };
-  }
-
-  let background = "";
-  let training_relevance = "";
-  try {
-    const raw = await callDeepSeek(deepseekKey, [
-      {
-        role: "system",
-        content: `你是企业/机构培训项目前期调研助手。只能依据用户提供的公开检索结果总结，不得使用记忆补充事实，不得编造内部情况。只输出严格JSON。`
-      },
-      {
-        role: "user",
-        content: `客户名称：${customerName}\n\n公开检索结果：\n${JSON.stringify(sources, null, 2)}\n\n请只依据以上资料输出：\n{\n  "background":"1-2段客户背景，聚焦机构性质、主营/职责、公开战略重点、近期重点工作；无依据内容省略",\n  "training_relevance":"1段与培训主题设计可能相关的公开背景线索。只写资料支持的线索，不要把推测写成客户真实需求"\n}`
-      }
-    ], 1600);
-    const parsed = extractJson(raw);
-    background = parsed?.background || "";
-    training_relevance = parsed?.training_relevance || "";
-  } catch {}
 
   return {
     research_available: true,
     customer_name: customerName,
     researched_at: new Date().toISOString(),
-    query,
+    provider: "deepseek_web_search",
     sources,
-    background,
-    training_relevance,
-    message: "客户公开资料调研已完成。"
+    background: String(parsed?.background || "").trim(),
+    training_relevance: String(parsed?.training_relevance || "").trim(),
+    message: sources.length
+      ? "客户公开资料调研已完成。"
+      : "联网调研已执行，但未获得可保留的可靠来源。"
   };
 }
 
@@ -681,14 +681,13 @@ export async function onRequestPost(context) {
       if (!customerName) return json({ error: "customer_name 不能为空" }, 400);
       try {
         const research = await researchCustomer(
-          context.env.TAVILY_API_KEY,
           deepseekKey,
           customerName
         );
         return json(research);
       } catch (e) {
         return json({
-          research_available: Boolean(context.env.TAVILY_API_KEY),
+          research_available: Boolean(deepseekKey),
           customer_name: customerName,
           background: "",
           training_relevance: "",
@@ -777,7 +776,8 @@ export async function onRequestGet(context) {
     service:"AI Workbench Chat API",
     version:"1.1.3",
     clarification_before_plan:true,
-    customer_research_configured:Boolean(context.env.TAVILY_API_KEY),
+    customer_research_configured:Boolean(context.env.DEEPSEEK_API_KEY),
+    customer_research_provider:"deepseek_web_search",
     structured_output:true,
     deterministic_matching:true,
     deepseek_configured:Boolean(context.env.DEEPSEEK_API_KEY),
