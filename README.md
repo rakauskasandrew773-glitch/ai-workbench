@@ -1,48 +1,58 @@
-# AI工作台 V1.0（动态版）
+AI教研助手 V1.1.3｜项目化 + 客户调研 + 师资简介 + 正式成果输出
 
-本项目用于直接部署到 Tencent EdgeOne Makers / Pages。
+一、需要更新 GitHub
+1. 替换根目录 assistant.html
+2. 替换 edge-functions/api/chat.js
+3. 保留/上传 assets/jszip.min.js
+4. 可选：保留 docs、tests 仅作开发记录，不影响部署
 
-## 功能
-- AI工作台首页
-- AI教研助手独立页面
-- `/api/chat` Serverless API
-- DeepSeek API Key 保存在服务端环境变量中，不暴露在前端
-- 响应式页面，可电脑和手机访问
+二、CloudBase
+执行 V1.1.3_数据库升级.sql。
+SQL只增加师资简介字段，不会自动生成任何简介，也不会修改现有数据。
 
-## 项目结构
+三、EdgeOne 环境变量
+继续使用现有变量即可：
+- DEEPSEEK_API_KEY
+- CLOUDBASE_ENV_ID
+- CLOUDBASE_API_KEY
 
-```text
-.
-├── index.html
-├── assistant.html
-├── edge-functions/
-│   └── api/
-│       └── chat.js
-├── .gitignore
-└── README.md
-```
+客户公开资料调研已改为 DeepSeek Responses API + web_search，不再需要 TAVILY_API_KEY，也不需要新增搜索服务密钥。
+如果 DEEPSEEK_API_KEY 不可用，客户调研会失败，但系统不得凭空生成客户背景事实。
 
-## 必须配置的环境变量
+四、本版新增
+1. 新建项目：新项目彻底隔离上一项目对话和方案
+2. 我的方案：浏览器本地保存历史项目，可切换恢复
+3. 客户名称：新建项目时可填写
+4. 客户调研：首次生成方案前可调用公开网络检索并保存快照
+5. Word：增加培训背景、需求解读、课程设计思路、推荐师资简介、公开资料来源
+6. Excel：正式课表直接增加“师资简介”列
+7. 师资简介：优先 teachers.profile；没有时只使用库内已有单位/院系/研究方向拼成事实型简介，不补造学历、职务、兼职、成果、荣誉
+8. 正式导出继续不包含“待确认事项”
 
-在 EdgeOne Makers 项目中添加：
+五、建议测试
+A. 上下文隔离
+- 项目A输入“金融机构干部，1天，跨境金融”并生成
+- 点击“新建项目”创建项目B
+- 项目B不应出现项目A的对话或方案
+- 点击“我的方案”切回项目A，应恢复项目A内容
 
-```text
-DEEPSEEK_API_KEY=你的 DeepSeek API Key
-```
+B. 客户调研
+- 新建项目时填写客户名称
+- 确保 DEEPSEEK_API_KEY 正常后发送培训需求
+- 应先出现“正在调研客户公开资料”
+- Word中出现“培训背景 / 需求解读 / 公开资料来源”
 
-不要把 API Key 写进代码，也不要提交到 GitHub。
+C. 师资简介
+- 若 teachers.profile 有值，应原样进入页面/Excel/Word
+- 若 profile 为空，只允许出现现有库内字段能够支持的简短事实介绍
+- 无任何可靠信息时保持空白
 
-## 本地说明
+D. Excel
+- 下载文件扩展名必须为 .xlsx
+- 正式推荐课表必须含“师资简介”列
 
-直接双击 `index.html` 可以预览工作台 UI，但真实 AI 调用依赖 EdgeOne 的 `/api/chat` Serverless Function，所以完整功能需要部署后测试。
-
-## 部署
-
-推荐：
-1. GitHub 新建仓库 `ai-workbench`
-2. 把本项目全部文件上传到仓库根目录
-3. EdgeOne Makers 新建项目
-4. 从 GitHub 导入仓库
-5. 配置环境变量 `DEEPSEEK_API_KEY`
-6. 部署
-7. 打开 EdgeOne 提供的访问地址测试
+六、客户调研搜索源
+- 当前：DeepSeek Responses API 内置 web_search
+- 不再依赖 Tavily
+- 后端会要求先联网搜索，再基于搜索结果生成客户背景、培训相关线索和来源列表
+- 网络事实必须带来源；无可靠依据的信息留空
