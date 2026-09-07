@@ -36,3 +36,22 @@ test('uses the backup provider after two retryable primary timeouts', async () =
   assert.equal(result.provider, 'backup');
   assert.equal(result.sources[0].url, 'https://www.sufe.edu.cn/');
 });
+
+test('uses the backup provider after a non-retryable primary failure', async () => {
+  let backupAttempts = 0;
+
+  const result = await researchCustomer({
+    customerName: '上海财经大学',
+    primarySearch: async () => {
+      throw Object.assign(new Error('invalid structured response'), { status: 400 });
+    },
+    backupSearch: async () => {
+      backupAttempts += 1;
+      return { sources: [{ title: '上海财经大学官网', url: 'https://www.sufe.edu.cn/' }] };
+    }
+  });
+
+  assert.equal(backupAttempts, 1);
+  assert.equal(result.status, 'succeeded');
+  assert.equal(result.provider, 'backup');
+});

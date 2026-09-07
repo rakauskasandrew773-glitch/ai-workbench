@@ -47,7 +47,7 @@ export async function researchCustomer({ customerName, primarySearch, backupSear
     }
   }
 
-  if (typeof backupSearch === 'function' && isRetryable(lastError)) {
+  if (typeof backupSearch === 'function') {
     try {
       return succeeded(await backupSearch(), 'backup');
     } catch {
