@@ -15,9 +15,9 @@ SQL只增加师资简介字段，不会自动生成任何简介，也不会修�
 - DEEPSEEK_API_KEY
 - CLOUDBASE_ENV_ID
 - CLOUDBASE_API_KEY
+- BOCHA_API_KEY（可选：DeepSeek 联网调研两次超时或服务端错误后的备用检索）
 
-客户公开资料调研已改为 DeepSeek Responses API + web_search，不再需要 TAVILY_API_KEY，也不需要新增搜索服务密钥。
-如果 DEEPSEEK_API_KEY 不可用，客户调研会失败，但系统不得凭空生成客户背景事实。
+客户公开资料调研优先使用 DeepSeek Responses API + web_search；配置 BOCHA_API_KEY 后，遇到可重试的超时或上游服务错误会自动切换至博查 Web Search。两条链路均无法获得可靠来源时，系统会继续生成课程方案，但不会凭空生成客户背景事实。
 
 四、本版新增
 1. 新建项目：新项目彻底隔离上一项目对话和方案
@@ -41,6 +41,7 @@ B. 客户调研
 - 确保 DEEPSEEK_API_KEY 正常后发送培训需求
 - 应先出现“正在调研客户公开资料”
 - Word中出现“培训背景 / 需求解读 / 公开资料来源”
+- 如配置 BOCHA_API_KEY，可临时使主检索超时，确认页面不会展示技术报错，并可保留带 URL 的备用来源
 
 C. 师资简介
 - 若 teachers.profile 有值，应原样进入页面/Excel/Word
@@ -52,7 +53,8 @@ D. Excel
 - 正式推荐课表必须含“师资简介”列
 
 六、客户调研搜索源
-- 当前：DeepSeek Responses API 内置 web_search
+- 主链路：DeepSeek Responses API 内置 web_search（35 秒超时、一次短暂重试）
+- 备用链路：博查 Web Search（仅在主链路发生可重试超时或上游错误时调用，需配置 BOCHA_API_KEY）
 - 不再依赖 Tavily
 - 后端会要求先联网搜索，再基于搜索结果生成客户背景、培训相关线索和来源列表
 - 网络事实必须带来源；无可靠依据的信息留空
