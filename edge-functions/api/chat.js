@@ -1,3 +1,6 @@
+import { researchCustomer as runCustomerResearch } from "../lib/research/service.js";
+import { createBochaSearch } from "../lib/research/providers/bocha.js";
+
 const SYSTEM_PROMPT = `你是“AI教研助手”，服务于培训、干部教育、终身教育、企业培训等教研场景。
 
 核心事实规则：
@@ -77,33 +80,57 @@ async function callDeepSeek(apiKey, messages, maxTokens = 1800) {
 }
 
 
-async function callDeepSeekWebResearch(apiKey, customerName) {
+export async function callDeepSeekWebResearch(apiKey, customerName, {
+  fetchImpl = fetch,
+  timeoutMs = 35000
+} = {}) {
   const instructions = `你是企业/机构培训项目前期公开资料调研助手。必须先使用联网搜索工具，再根据搜索到的公开网页作答。\n\n事实规则：\n1. 只能使用本次联网搜索实际找到的公开信息，不得使用模型记忆补充客户事实。\n2. 优先客户官网、政府官网、官方新闻稿、权威媒体；普通网页仅作补充。\n3. 不得把推测写成客户内部事实或真实需求。\n4. 来源 URL 必须来自本次搜索结果，不得编造 URL。\n5. 无可靠依据的字段留空。\n6. 只输出严格 JSON。`;
 
   const input = `请调研客户“${customerName}”，重点检索：机构性质/主营或职责、公开战略重点、2025-2026近期重点工作、数字化/人工智能/金融科技/人才队伍建设等与培训设计可能相关的公开信息。\n\n输出 JSON：\n{\n  "background":"1-2段客户背景，只写搜索结果支持的事实",\n  "training_relevance":"1段与培训方案设计相关的公开背景线索。必须用‘结合公开资料可关注…’这类分析口径，不得宣称为客户未明确表达的内部需求",\n  "sources":[\n    {\n      "title":"网页标题",\n      "url":"本次搜索结果中的真实URL",\n      "published_at":"能确认则填写，否则空字符串",\n      "summary":"该来源实际支持的1句关键信息"\n    }\n  ]\n}\n\n最多保留8条最可靠、最相关来源。`;
 
-  const res = await fetch("https://api.deepseek.com/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "deepseek-v4-flash",
-      instructions,
-      input,
-      tools: [{ type: "web_search" }],
-      tool_choice: { type: "web_search" },
-      text: { format: { type: "json_object" } },
-      max_output_tokens: 2200,
-      temperature: 0.1,
-      stream: false
-    })
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let data;
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.error?.message || `DeepSeek 联网调研返回 ${res.status}`);
+  try {
+    const res = await fetchImpl("https://api.deepseek.com/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "deepseek-v4-flash",
+        instructions,
+        input,
+        tools: [{ type: "web_search" }],
+        tool_choice: { type: "web_search" },
+        text: { format: { type: "json_object" } },
+        max_output_tokens: 2200,
+        temperature: 0.1,
+        stream: false
+      }),
+      signal: controller.signal
+    });
+
+    try {
+      data = await res.json();
+    } catch {
+      throw Object.assign(new Error("DeepSeek 联网调研返回非 JSON 数据"), { status: res.status });
+    }
+    if (!res.ok) {
+      throw Object.assign(
+        new Error(data?.error?.message || `DeepSeek 联网调研返回 ${res.status}`),
+        { status: res.status }
+      );
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw Object.assign(new Error("DeepSeek research timed out"), { code: "TIMEOUT" });
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
 
   const outputText = (Array.isArray(data?.output) ? data.output : [])
@@ -122,41 +149,38 @@ async function callDeepSeekWebResearch(apiKey, customerName) {
   return parsed;
 }
 
-async function researchCustomer(deepseekKey, customerName) {
+async function researchCustomer(deepseekKey, customerName, bochaKey) {
   if (!deepseekKey) {
     return {
       research_available: false,
       customer_name: customerName,
-      message: "客户公开资料调研尚未启用：服务器未配置 DEEPSEEK_API_KEY。",
+      status: "failed",
+      user_message: "客户公开资料调研尚未启用。",
+      message: "客户公开资料调研尚未启用。",
       sources: [],
       background: "",
       training_relevance: ""
     };
   }
 
-  const parsed = await callDeepSeekWebResearch(deepseekKey, customerName);
-  const sources = (Array.isArray(parsed?.sources) ? parsed.sources : [])
-    .filter(x => x && typeof x.url === "string" && /^https?:\/\//i.test(x.url) && typeof x.title === "string")
-    .slice(0, 8)
-    .map(x => ({
-      title: String(x.title || "").trim(),
-      url: String(x.url || "").trim(),
-      published_at: String(x.published_at || "").trim(),
-      content: String(x.summary || "").trim().slice(0, 800),
-      provider: "deepseek_web_search"
-    }));
+  const bochaSearch = createBochaSearch({ apiKey: bochaKey });
+  const research = await runCustomerResearch({
+    customerName,
+    primarySearch: () => callDeepSeekWebResearch(deepseekKey, customerName),
+    backupSearch: bochaSearch
+      ? async () => ({
+        sources: await bochaSearch(`${customerName} 机构性质 主营职责 战略重点 近期重点工作 人才 数字化 人工智能`)
+      })
+      : undefined,
+    wait: () => new Promise(resolve => setTimeout(resolve, 400))
+  });
 
   return {
     research_available: true,
     customer_name: customerName,
     researched_at: new Date().toISOString(),
-    provider: "deepseek_web_search",
-    sources,
-    background: String(parsed?.background || "").trim(),
-    training_relevance: String(parsed?.training_relevance || "").trim(),
-    message: sources.length
-      ? "客户公开资料调研已完成。"
-      : "联网调研已执行，但未获得可保留的可靠来源。"
+    ...research,
+    message: research.user_message
   };
 }
 
@@ -319,27 +343,15 @@ function normalizeSessions(req) {
 }
 
 
-function buildSafeTeacherProfile(t) {
-  if (typeof t?.profile === "string" && t.profile.trim()) {
+export function buildSafeTeacherProfile(t) {
+  if (
+    String(t?.profile_status || "").trim().toLowerCase() === "verified" &&
+    typeof t?.profile === "string" &&
+    t.profile.trim()
+  ) {
     return t.profile.trim();
   }
-
-  const parts = [];
-  const org = [t?.institution, t?.department].filter(Boolean).join(" ");
-  if (org) parts.push(`${t.name}，${org}`);
-  else if (t?.name) parts.push(t.name);
-
-  if (t?.research_topics) {
-    const topics = String(t.research_topics)
-      .split(/[；;、,，]+/)
-      .map(x => x.trim())
-      .filter(Boolean)
-      .join("、");
-    if (topics) parts.push(`主要研究领域包括${topics}`);
-  }
-
-  if (!parts.length) return "";
-  return parts.join("。") + "。";
+  return "";
 }
 
 async function loadTeachers(envId, apiKey) {
@@ -387,8 +399,8 @@ function buildFacultyContext(teachers, courses, relations) {
       duration: c.duration || "",
       evidence_note: r.evidence_note || "",
       teacher_profile: buildSafeTeacherProfile(t),
-      profile_source_type: t.profile_source_type || (t.profile ? "library" : "library_fields"),
-      profile_status: t.profile_status || (t.profile ? "verified" : "derived")
+      profile_source_type: t.profile_source_type || (t.profile ? "library" : ""),
+      profile_status: t.profile_status || ""
     };
 
     if (t.source_type === "库内师资") formal.push(item);
@@ -646,17 +658,17 @@ function normalizePlan(modelPlan, fallbackPlan, req) {
 }
 
 
-function enrichScheduleProfiles(plan, rankedFormal) {
+export function enrichScheduleProfiles(plan, rankedFormal) {
   const rows = Array.isArray(plan?.formal_schedule) ? plan.formal_schedule : [];
   plan.formal_schedule = rows.map(row => {
     const match = rankedFormal.find(x =>
       (row.course_title && x.course_title === row.course_title) ||
       (row.teacher_name && x.teacher_name === row.teacher_name)
     );
-    if (!match) return { ...row, teacher_profile: row.teacher_profile || "" };
+    if (!match) return { ...row, teacher_profile: "" };
     return {
       ...row,
-      teacher_profile: match.teacher_profile || row.teacher_profile || "",
+      teacher_profile: match.teacher_profile || "",
       institution: row.institution || [match.institution, match.department].filter(Boolean).join(" "),
       source_type: row.source_type || match.source_type
     };
@@ -667,12 +679,9 @@ function enrichScheduleProfiles(plan, rankedFormal) {
 export async function onRequestPost(context) {
   try {
     const deepseekKey = context.env.DEEPSEEK_API_KEY;
+    const bochaKey = context.env.BOCHA_API_KEY;
     const cloudbaseEnvId = context.env.CLOUDBASE_ENV_ID;
     const cloudbaseApiKey = context.env.CLOUDBASE_API_KEY;
-
-    if (!deepseekKey) return json({error:"服务器未配置 DEEPSEEK_API_KEY"},500);
-    if (!cloudbaseEnvId) return json({error:"服务器未配置 CLOUDBASE_ENV_ID"},500);
-    if (!cloudbaseApiKey) return json({error:"服务器未配置 CLOUDBASE_API_KEY"},500);
 
     const body = await context.request.json();
 
@@ -682,19 +691,26 @@ export async function onRequestPost(context) {
       try {
         const research = await researchCustomer(
           deepseekKey,
-          customerName
+          customerName,
+          bochaKey
         );
         return json(research);
-      } catch (e) {
+      } catch {
         return json({
           research_available: Boolean(deepseekKey),
           customer_name: customerName,
+          status: "retryable_failure",
           background: "",
           training_relevance: "",
           sources: [],
-          error: e?.message || "客户调研失败"
-        }, 502);
+          user_message: "客户公开资料暂未获取成功，课程方案已继续生成，可点击“重新调研客户”后再试。",
+          message: "客户公开资料暂未获取成功，课程方案已继续生成，可点击“重新调研客户”后再试。"
+        });
       }
+    }
+
+    if (!deepseekKey || !cloudbaseEnvId || !cloudbaseApiKey) {
+      return json({ error: "服务暂未就绪，请稍后重试。" }, 503);
     }
 
     const incoming = Array.isArray(body.messages) ? body.messages : [];
