@@ -14,11 +14,12 @@ export function createBochaSearch({ apiKey, fetchImpl = fetch }) {
     });
 
     const data = await response.json();
-    if (!response.ok || data?.code !== 200) {
+    if (!response.ok || (data?.code != null && data.code !== 200)) {
       throw Object.assign(new Error('Backup search request failed'), { status: response.status });
     }
 
-    return (Array.isArray(data?.data?.webPages?.value) ? data.data.webPages.value : [])
+    const webPages = data?.webPages?.value || data?.data?.webPages?.value;
+    return (Array.isArray(webPages) ? webPages : [])
       .filter(item => item && item.name && item.url)
       .map(item => ({
         title: String(item.name).trim(),
