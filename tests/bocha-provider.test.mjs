@@ -35,3 +35,26 @@ test('maps Bocha web-search results into traceable research sources', async () =
     provider: 'bocha_web_search'
   }]);
 });
+
+test('accepts the official top-level Bocha Web Search response shape', async () => {
+  const search = createBochaSearch({
+    apiKey: 'bocha-key',
+    fetchImpl: async () => new Response(JSON.stringify({
+      _type: 'SearchResponse',
+      webPages: {
+        value: [{
+          name: '上海财经大学官网',
+          url: 'https://www.sufe.edu.cn/',
+          datePublished: '2026-01-01T00:00:00+08:00',
+          summary: '官网公开介绍办学信息。'
+        }]
+      }
+    }), { status: 200 })
+  });
+
+  const results = await search('上海财经大学');
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].title, '上海财经大学官网');
+  assert.equal(results[0].url, 'https://www.sufe.edu.cn/');
+});
